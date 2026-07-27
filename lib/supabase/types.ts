@@ -75,6 +75,13 @@ export type ImportBatchRow = {
   rows_unmapped: number;
 };
 
+export type AppSettingsRow = {
+  id: boolean;
+  default_transfer_limit_pct: string;
+  default_warning_threshold_pct: string;
+  updated_at: string;
+};
+
 export type ProjectInsert = Omit<ProjectRow, 'id' | 'created_at' | 'updated_at'>;
 export type BudgetLineInsert = Omit<BudgetLineRow, 'id' | 'created_at' | 'updated_at'>;
 export type LedgerEntryInsert = Omit<LedgerEntryRow, 'id' | 'created_at' | 'updated_at'>;
@@ -84,6 +91,7 @@ export type LedgerEntryInsert = Omit<LedgerEntryRow, 'id' | 'created_at' | 'upda
 export type ProjectUpdate = Partial<Omit<ProjectRow, 'id' | 'created_at'>>;
 export type BudgetLineUpdate = Partial<Omit<BudgetLineRow, 'id' | 'created_at'>>;
 export type LedgerEntryUpdate = Partial<Omit<LedgerEntryRow, 'id' | 'created_at'>>;
+export type AppSettingsUpdate = Partial<Omit<AppSettingsRow, 'id'>>;
 
 export type Database = {
   public: {
@@ -92,6 +100,7 @@ export type Database = {
       budget_lines:   { Row: BudgetLineRow;   Insert: BudgetLineInsert;   Update: BudgetLineUpdate;  Relationships: [] };
       ledger_entries: { Row: LedgerEntryRow;  Insert: LedgerEntryInsert;  Update: LedgerEntryUpdate; Relationships: [] };
       import_batches: { Row: ImportBatchRow;  Insert: Omit<ImportBatchRow, 'id' | 'imported_at'>; Update: Partial<ImportBatchRow>; Relationships: [] };
+      app_settings:   { Row: AppSettingsRow;  Insert: AppSettingsRow;    Update: AppSettingsUpdate; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

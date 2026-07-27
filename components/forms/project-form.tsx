@@ -22,6 +22,11 @@ import {
 
 type ProjectFormProps = {
   defaultValues?: Partial<ProjectFormValues> & { id?: string };
+  // Padrões vindos de `loadSettings()` (Configurações), usados só quando
+  // `defaultValues` não traz `transferLimitPct`/`warningThresholdPct` — ou
+  // seja, na criação de um projeto novo. Na edição, `defaultValues` sempre
+  // traz os dois (vêm do projeto salvo), então `defaults` é ignorado.
+  defaults?: { transferLimitPct: number; warningThresholdPct: number };
   onSubmit: (values: ProjectFormValues) => Promise<ActionResult<{ id: string }> | ActionResult>;
   submitLabel: string;
 };
@@ -32,7 +37,12 @@ const STATUS_OPTIONS: { value: ProjectFormValues['status']; label: string }[] = 
   { value: 'encerrado', label: 'Encerrado' },
 ];
 
-export function ProjectForm({ defaultValues, onSubmit, submitLabel }: ProjectFormProps) {
+export function ProjectForm({
+  defaultValues,
+  defaults,
+  onSubmit,
+  submitLabel,
+}: ProjectFormProps) {
   const router = useRouter();
 
   const {
@@ -49,8 +59,9 @@ export function ProjectForm({ defaultValues, onSubmit, submitLabel }: ProjectFor
       startDate: defaultValues?.startDate ?? null,
       endDate: defaultValues?.endDate ?? null,
       status: defaultValues?.status ?? 'ativo',
-      transferLimitPct: defaultValues?.transferLimitPct ?? 25,
-      warningThresholdPct: defaultValues?.warningThresholdPct ?? 80,
+      transferLimitPct: defaultValues?.transferLimitPct ?? defaults?.transferLimitPct ?? 25,
+      warningThresholdPct:
+        defaultValues?.warningThresholdPct ?? defaults?.warningThresholdPct ?? 80,
       notes: defaultValues?.notes ?? null,
     },
   });
