@@ -48,10 +48,13 @@ describe('resolveImport', () => {
     expect(plan.projects[0].newBudgetLines).toHaveLength(0);
   });
 
-  it('marca como duplicado quando voucher+journal já existe', () => {
+  it('marca como duplicado quando a chave já foi importada', () => {
+    // A chave é um hash calculado internamente; pega-se o valor real de uma
+    // primeira resolução e alimenta-se o contexto com ele.
+    const chave = resolveImport([entry()], context).projects[0].newEntries[0].importKey!;
     const ctx: ResolutionContext = {
       ...context,
-      existingKeysByProject: { 'proj-1': ['CONTAB1|2-1'] },
+      existingKeysByProject: { 'proj-1': [chave] },
     };
     const plan = resolveImport([entry()], ctx);
     expect(plan.projects[0].newEntries).toHaveLength(0);
@@ -62,6 +65,28 @@ describe('resolveImport', () => {
     const plan = resolveImport([entry(), entry()], context);
     expect(plan.projects[0].newEntries).toHaveLength(1);
     expect(plan.projects[0].duplicateCount).toBe(1);
+  });
+
+  it('não confunde linhas do mesmo documento separadas pela descrição', () => {
+    // Caso real: CONTAB000200813 cobre 9 linhas, duas com a mesma conta e o
+    // mesmo valor, distinguidas só pela nota fiscal citada na descrição.
+    // Com a chave antiga (voucher+journal) uma delas era descartada.
+    const a = entry({ description: 'Compra referente NF 180785 - BRASLUSO TURISMO LTDA' });
+    const b = entry({ description: 'Compra referente NF 180789 - BRASLUSO TURISMO LTDA' });
+    const plan = resolveImport([a, b], context);
+    expect(plan.projects[0].newEntries).toHaveLength(2);
+    expect(plan.projects[0].duplicateCount).toBe(0);
+    expect(plan.projects[0].newEntries[0].importKey).not.toBe(
+      plan.projects[0].newEntries[1].importKey,
+    );
+  });
+
+  it('distingue linhas do mesmo documento por conta e por valor', () => {
+    const porConta = entry({ accountCode: '31010403001', accountName: 'Hospedagens' });
+    const porValor = entry({ amount: 999.99 });
+    const plan = resolveImport([entry(), porConta, porValor], context);
+    expect(plan.projects[0].newEntries).toHaveLength(3);
+    expect(plan.projects[0].duplicateCount).toBe(0);
   });
 
   it('propõe rubrica nova quando a conta não existe', () => {

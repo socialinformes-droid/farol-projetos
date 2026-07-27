@@ -95,11 +95,11 @@ export async function POST(request: Request) {
 
   // 4. Insere os lançamentos em lotes de 500.
   //
-  // O índice de idempotência (project_id, voucher, journal) é parcial
+  // O índice de idempotência (project_id, import_key) é parcial
   // (`where source = 'import'`) — o Postgres só usa um índice parcial como
   // alvo de ON CONFLICT quando o predicado é repetido na cláusula, e o
   // upsert do PostgREST/supabase-js não permite declarar esse predicado.
-  // Verificado ao vivo: `.upsert(..., { onConflict: 'project_id,voucher,journal' })`
+  // Verificado ao vivo: `.upsert(..., { onConflict: 'project_id,import_key' })`
   // falha sempre com 42P10 ("no unique or exclusion constraint matching the
   // ON CONFLICT specification"), mesmo sem conflito nenhum nos dados — não é
   // uma alternativa viável aqui. Em vez disso, inserimos com INSERT simples
@@ -127,6 +127,7 @@ export async function POST(request: Request) {
     document_date: entry.documentDate,
     urls: entry.urls,
     source: 'import',
+    import_key: entry.importKey,
     import_batch_id: batchId,
     raw: entry.raw,
   }));

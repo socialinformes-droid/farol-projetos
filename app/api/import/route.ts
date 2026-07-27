@@ -42,10 +42,10 @@ export async function POST(request: Request) {
     projectIds.length
       ? supabase
           .from('ledger_entries')
-          .select('project_id, voucher, journal')
+          .select('project_id, import_key')
           .in('project_id', projectIds)
           .eq('source', 'import')
-      : Promise.resolve({ data: [] as { project_id: string; voucher: string | null; journal: string | null }[] }),
+      : Promise.resolve({ data: [] as { project_id: string; import_key: string | null }[] }),
   ]);
 
   const context: ResolutionContext = {
@@ -60,9 +60,9 @@ export async function POST(request: Request) {
     (context.budgetLinesByProject[l.project_id] ??= []).push({ id: l.id, code: l.code });
   }
   for (const e of existing ?? []) {
-    (context.existingKeysByProject[e.project_id] ??= []).push(
-      `${e.voucher ?? ''}|${e.journal ?? ''}`,
-    );
+    if (e.import_key) {
+      (context.existingKeysByProject[e.project_id] ??= []).push(e.import_key);
+    }
   }
 
   return NextResponse.json({

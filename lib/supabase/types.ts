@@ -57,6 +57,7 @@ export type LedgerEntryRow = {
   document_date: string | null;
   urls: EntryUrls;
   source: EntrySource;
+  import_key: string | null;
   import_batch_id: string | null;
   raw: Record<string, string> | null;
   created_at: string;

@@ -47,6 +47,8 @@ export async function createEntry(
       document_date: null,
       urls: {},
       source: 'manual',
+    // Lançamento manual não vem do razão: sem chave de idempotência.
+    import_key: null,
       import_batch_id: null,
       raw: null,
     })
