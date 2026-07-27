@@ -187,54 +187,33 @@ export function parseLedgerRows(rows: string[][]): ParseResult {
 
 /**
  * Converte a primeira aba do .xlsx numa matriz de strings.
- * Só é chamado em Route Handler; ExcelJS não roda no browser.
+ * Só é chamado em Route Handler; não roda no browser.
+ *
+ * Usa SheetJS, não ExcelJS: o Genus escreve o XML interno com prefixo de
+ * namespace (`<x:row>`, `<x:c>`) e sem os atributos `r=` de referência de
+ * célula. É válido, mas o ExcelJS não abre essa variante — falha com
+ * "Cannot read properties of undefined (reading 'sheets')". O SheetJS lê
+ * sem esforço. Ver docs/superpowers/plans para o registro da decisão.
  */
 export async function readWorkbookRows(buffer: ArrayBuffer): Promise<string[][]> {
-  // exceljs é CommonJS puro. Bundlers (webpack/Turbopack) reexpõem 'Workbook'
-  // diretamente no namespace do import() dinâmico; o loader ESM nativo do
-  // Node (usado por tsx e por scripts avulsos) só expõe `.default`. Aceita
-  // os dois formatos para não quebrar fora do runtime do Next.js.
-  const mod: unknown = await import('exceljs');
-  const modAny = mod as Record<string, unknown>;
-  const ExcelJS = (
-    'Workbook' in modAny ? modAny : modAny.default
-  ) as typeof import('exceljs');
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  const XLSX = await import('xlsx');
 
-  const sheet = workbook.worksheets[0];
-  if (!sheet) throw new Error('A planilha não tem nenhuma aba.');
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error('A planilha não tem nenhuma aba.');
 
-  const rows: string[][] = [];
-  // includeEmpty: true na linha (não só na célula) — o rodapé do relatório
-  // tem uma linha totalmente em branco (zero células) entre 'Total' e
-  // 'Filtros aplicados:'. Com includeEmpty:false o ExcelJS pula essa linha
-  // silenciosamente antes mesmo dela chegar em parseLedgerRows, que é quem
-  // sabe descartá-la (Centro vazio) — sem isso ela nunca é contada.
-  sheet.eachRow({ includeEmpty: true }, (row) => {
-    const values: string[] = [];
-    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      const value = cell.value;
-      let text = '';
-      if (value === null || value === undefined) text = '';
-      else if (value instanceof Date) {
-        const dd = String(value.getUTCDate()).padStart(2, '0');
-        const mm = String(value.getUTCMonth() + 1).padStart(2, '0');
-        text = `${dd}/${mm}/${value.getUTCFullYear()}`;
-      } else if (typeof value === 'object' && 'text' in value) {
-        text = String((value as { text: unknown }).text ?? '');
-      } else if (typeof value === 'object' && 'result' in value) {
-        text = String((value as { result: unknown }).result ?? '');
-      } else {
-        text = String(value);
-      }
-      values[colNumber - 1] = text;
-    });
-    for (let i = 0; i < values.length; i += 1) {
-      if (values[i] === undefined) values[i] = '';
-    }
-    rows.push(values);
+  const sheet = workbook.Sheets[sheetName];
+
+  // raw: false devolve o texto formatado da célula, então a coluna Data chega
+  // como 'dd/MM/yyyy' e parseBRDate a entende. Com raw: true viria o serial
+  // numérico do Excel e todo lançamento seria descartado.
+  // defval: '' preserva as células vazias, mantendo o alinhamento com o
+  // cabeçalho; blankrows: true preserva a linha em branco do rodapé, que
+  // parseLedgerRows precisa ver para contá-la entre as descartadas.
+  return XLSX.utils.sheet_to_json<string[]>(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+    blankrows: true,
   });
-
-  return rows;
 }

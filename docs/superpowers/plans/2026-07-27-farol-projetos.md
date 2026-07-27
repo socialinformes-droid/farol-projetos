@@ -6,7 +6,7 @@
 
 **Architecture:** Fork podado do Financeme (`~/projetos/financeiro`). Next.js 16 App Router com `page.tsx` server buscando dados e `_view.tsx` client cuidando de interação. Toda a lógica de negócio vive em módulos puros sob `lib/domain/`, sem dependência de Supabase, testados com Vitest. Acesso ao banco exclusivamente server-side via service role key, através de Server Actions e Route Handlers — nunca do browser.
 
-**Tech Stack:** Next.js 16.2.4, React 19.2, TypeScript, Tailwind 4, Base UI + shadcn, Recharts, React Hook Form + Zod, Sonner, Vitest, ExcelJS, Supabase (project_ref `pseksrhwsgfoyackzahb`), deploy Vercel.
+**Tech Stack:** Next.js 16.2.4, React 19.2, TypeScript, Tailwind 4, Base UI + shadcn, Recharts, React Hook Form + Zod, Sonner, Vitest, SheetJS (leitura de xlsx, vendorizado) + ExcelJS (escrita), Supabase (project_ref `pseksrhwsgfoyackzahb`), deploy Vercel.
 
 ## Global Constraints
 
@@ -1550,52 +1550,54 @@ Esperado: PASS, 13 testes.
 
 - [ ] **Step 5: Leitor de workbook**
 
-Acrescente ao fim de `lib/domain/ledger-import.ts`. Fica separado do parser porque ExcelJS é pesado e só roda em Node — o parser puro continua testável sem ele.
+Acrescente ao fim de `lib/domain/ledger-import.ts`. Fica separado do parser porque a biblioteca de planilha é pesada e só roda em Node — o parser puro continua testável sem ela.
+
+**Use SheetJS, não ExcelJS.** O ExcelJS não abre o arquivo que o Genus gera: o export escreve o XML interno com prefixo de namespace (`<x:row>`, `<x:c>`) e sem os atributos `r=` de referência de célula. É XML válido, mas o ExcelJS falha com `Cannot read properties of undefined (reading 'sheets')`. Verificado contra o arquivo real.
+
+O SheetJS entra **vendorizado**, porque a versão publicada no npm é a `0.18.5` e carrega dois advisories *high* (prototype pollution e ReDoS); a `0.20.3` corrige ambos mas só é distribuída pelo CDN da SheetJS. Vendorizar evita as CVEs e não faz o build da Vercel depender do CDN:
+
+```bash
+mkdir -p vendor
+curl -sS -o vendor/xlsx-0.20.3.tgz https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+npm i file:vendor/xlsx-0.20.3.tgz
+```
+
+O ExcelJS **continua no projeto** para a escrita do export (Task 12): a formatação de célula que ela precisa — negrito no cabeçalho, `numFmt` de moeda — é recurso pago no SheetJS.
 
 ```ts
 /**
  * Converte a primeira aba do .xlsx numa matriz de strings.
- * Só é chamado em Route Handler; ExcelJS não roda no browser.
+ * Só é chamado em Route Handler; não roda no browser.
+ *
+ * Usa SheetJS, não ExcelJS: o Genus escreve o XML interno com prefixo de
+ * namespace (`<x:row>`, `<x:c>`) e sem os atributos `r=` de referência de
+ * célula. É válido, mas o ExcelJS não abre essa variante.
  */
 export async function readWorkbookRows(buffer: ArrayBuffer): Promise<string[][]> {
-  const ExcelJS = await import('exceljs');
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  const XLSX = await import('xlsx');
 
-  const sheet = workbook.worksheets[0];
-  if (!sheet) throw new Error('A planilha não tem nenhuma aba.');
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error('A planilha não tem nenhuma aba.');
 
-  const rows: string[][] = [];
-  sheet.eachRow({ includeEmpty: false }, (row) => {
-    const values: string[] = [];
-    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      const value = cell.value;
-      let text = '';
-      if (value === null || value === undefined) text = '';
-      else if (value instanceof Date) {
-        const dd = String(value.getUTCDate()).padStart(2, '0');
-        const mm = String(value.getUTCMonth() + 1).padStart(2, '0');
-        text = `${dd}/${mm}/${value.getUTCFullYear()}`;
-      } else if (typeof value === 'object' && 'text' in value) {
-        text = String((value as { text: unknown }).text ?? '');
-      } else if (typeof value === 'object' && 'result' in value) {
-        text = String((value as { result: unknown }).result ?? '');
-      } else {
-        text = String(value);
-      }
-      values[colNumber - 1] = text;
-    });
-    for (let i = 0; i < values.length; i += 1) {
-      if (values[i] === undefined) values[i] = '';
-    }
-    rows.push(values);
+  const sheet = workbook.Sheets[sheetName];
+
+  // raw: false devolve o texto formatado da célula, então a coluna Data chega
+  // como 'dd/MM/yyyy' e parseBRDate a entende. Com raw: true viria o serial
+  // numérico do Excel e todo lançamento seria descartado.
+  // defval: '' preserva as células vazias, mantendo o alinhamento com o
+  // cabeçalho; blankrows: true preserva linhas em branco, que
+  // parseLedgerRows precisa ver para contá-las entre as descartadas.
+  return XLSX.utils.sheet_to_json<string[]>(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+    blankrows: true,
   });
-
-  return rows;
 }
 ```
 
-O tratamento de `Date` existe porque o ExcelJS converte células com formato de data em objetos `Date` — sem isso, `parseBRDate` receberia um ISO e devolveria `null`, descartando todos os lançamentos.
+O `raw: false` é o detalhe que faz ou quebra o import: sem ele a coluna `Data` chega como serial numérico do Excel, `parseBRDate` devolve `null` e **todos** os lançamentos são descartados silenciosamente.
 
 - [ ] **Step 6: Verificar contra o arquivo real**
 
@@ -1623,15 +1625,17 @@ Esperado, para o `data.xlsx` de referência:
 
 ```
 lançamentos: 33
-descartadas: 3
+descartadas: 2
 centros: [ { code: '30413070101', ..., count: 33, total: 7262.87 } ]
 baixas: 1
 total despesas: 48419.11
 ```
 
-As 3 descartadas são a linha `Total`, a linha `Filtros aplicados:` e a linha em branco entre elas. Se `lançamentos` vier 0, o ExcelJS converteu a coluna `Data` para `Date` de um jeito não previsto — inspecione `rows[1][0]` antes de mexer no parser.
+As 2 descartadas são a linha `Total` e a linha `Filtros aplicados:`. O arquivo tem 36 linhas no XML: cabeçalho + 33 lançamentos + essas duas. Não há linha em branco no rodapé.
 
-Instale `tsx` como dev dependency se necessário: `npm i -D tsx`. Apague `/tmp/verifica-razao.mjs` depois; ele não entra no repositório.
+Se `lançamentos` vier 0, o leitor entregou a coluna `Data` como serial numérico do Excel em vez de texto, e `parseBRDate` descartou tudo — inspecione `rows[1][0]` antes de mexer no parser.
+
+Instale `tsx` como dev dependency se necessário: `npm i -D tsx`. Apague o script depois; ele não entra no repositório.
 
 - [ ] **Step 7: Commit**
 
