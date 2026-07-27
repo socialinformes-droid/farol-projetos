@@ -15,7 +15,12 @@
 - **`SUPABASE_SERVICE_ROLE_KEY` jamais chega ao browser.** Nenhuma variável de acesso ao banco pode ter prefixo `NEXT_PUBLIC_`. Não existe cliente Supabase de browser neste projeto.
 - **Idioma:** toda a UI, mensagens de erro e nomes de coluna visíveis em português do Brasil, com acentuação correta. Identificadores de código em inglês.
 - **Moeda e data:** sempre pelos helpers de `lib/format.ts` (`formatBRL`, `formatDateBR`). Nunca `toLocaleString` solto.
-- **Valores monetários** são `numeric(14,2)` no Postgres e chegam ao JS como `string`. Converta com `Number()` na fronteira, nunca confie no tipo.
+- **Valores monetários** são `numeric(14,2)` no Postgres. O PostgREST os devolve como **number**, apesar de `lib/supabase/types.ts` declará-los `string` — verificado contra o banco real. Converta sempre com `Number()` na fronteira e **nunca chame método de string** (`.split`, `.replace`, `.toFixed` sobre o valor cru) nesses campos: typecheca e explode em runtime.
+- **Um arquivo com `'use server'` no topo só pode exportar funções assíncronas.** Schemas Zod, tipos e constantes não podem morar nele. O padrão estabelecido na Task 7 e que todas as tasks de actions seguem:
+  - `lib/actions/<dominio>-schema.ts` — sem diretiva, exporta o schema Zod, os tipos e `ActionResult`. Importável por Client Components.
+  - `lib/actions/<dominio>-mutations.ts` — com `'use server'`, só as actions assíncronas.
+  - `lib/actions/<dominio>.ts` — fachada sem diretiva, reexporta os dois. É o caminho de import que as outras tasks usam.
+- **`Database` em `lib/supabase/types.ts` exige `Relationships: []` em cada tabela.** Sem isso o `@supabase/supabase-js` colapsa o retorno de `.from()` para `never` e todo acesso ao banco para de typechecar.
 - **RLS habilitada e sem policy alguma** em todas as tabelas. O acesso legítimo é só por service role.
 - **Nenhum dado real de fornecedor** (CNPJ, razão social) entra em fixture de teste. Use os valores fictícios especificados na Task 5.
 - **Após todo `ALTER TABLE` ou `CREATE TABLE`,** execute `NOTIFY pgrst, 'reload schema';` — sem isso o PostgREST responde "column not found" em escritas.
