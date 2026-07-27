@@ -74,6 +74,27 @@ export async function updateEntry(
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
   const supabase = createAdminClient();
+
+  // Mesma trava do deleteEntry: um lançamento importado espelha o razão e não
+  // pode ser editado aqui. Alterar valor ou descrição faria a tela divergir do
+  // sistema contábil sem deixar rastro — e a descrição compõe a chave de
+  // idempotência, então editá-la faria o próximo import reinserir a linha.
+  // A UI já desabilita o botão; esta é a trava que vale.
+  const { data: existing } = await supabase
+    .from('ledger_entries')
+    .select('source')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!existing) return { ok: false, error: 'Lançamento não encontrado.' };
+  if (existing.source === 'import') {
+    return {
+      ok: false,
+      error:
+        'Lançamentos importados do razão não podem ser editados. Reclassifique-o ou ajuste no sistema de origem.',
+    };
+  }
+
   const { data, error } = await supabase
     .from('ledger_entries')
     .update({

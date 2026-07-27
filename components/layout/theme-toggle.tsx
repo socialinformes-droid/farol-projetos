@@ -1,36 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const STORAGE_KEY = 'financeiro_theme';
-
-type Theme = 'light' | 'dark';
+import { useHydrated } from '@/lib/use-hydrated';
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme | null>(null);
+  const { theme, setTheme } = useTheme();
 
-  useEffect(() => {
-    const saved = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? 'light';
-    apply(saved);
-    setTheme(saved);
-  }, []);
+  // O tema só é conhecido no cliente. Renderizar o estado real antes da
+  // hidratação causaria divergência com o HTML do servidor.
+  const hydrated = useHydrated();
 
-  const apply = (t: Theme) => {
-    const html = document.documentElement;
-    if (t === 'dark') html.classList.add('dark');
-    else html.classList.remove('dark');
-  };
-
-  const toggle = (t: Theme) => {
-    apply(t);
-    setTheme(t);
-    localStorage.setItem(STORAGE_KEY, t);
-  };
-
-  if (theme === null) {
-    // Skeleton enquanto hidrata
+  if (!hydrated) {
     return <div className="h-7 w-full rounded-md bg-muted/40 animate-pulse" aria-hidden />;
   }
 
@@ -40,7 +22,7 @@ export function ThemeToggle() {
       <div className="flex gap-0.5 rounded-md bg-muted/40 p-0.5">
         <button
           type="button"
-          onClick={() => toggle('light')}
+          onClick={() => setTheme('light')}
           className={cn(
             'inline-flex items-center justify-center h-6 w-7 rounded-sm transition-colors',
             theme === 'light'
@@ -54,7 +36,7 @@ export function ThemeToggle() {
         </button>
         <button
           type="button"
-          onClick={() => toggle('dark')}
+          onClick={() => setTheme('dark')}
           className={cn(
             'inline-flex items-center justify-center h-6 w-7 rounded-sm transition-colors',
             theme === 'dark'
