@@ -1,0 +1,302 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-handwritten: var(--font-handwritten);
+  --font-heading: var(--font-display);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-paper-dark: var(--paper-dark);
+  --color-rule: var(--rule);
+  --color-money-up: var(--money-up);
+  --color-money-down: var(--money-down);
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-green: var(--accent-green);
+  --color-accent-magenta: var(--accent-magenta);
+  --color-accent-purple: var(--accent-purple);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ============================================================================
+   Caderno Financeiro — paleta editorial (papel cremoso + tinta azul-marinho)
+   ============================================================================ */
+:root {
+  /* Tokens canônicos */
+  --paper: oklch(0.972 0.012 86);            /* fundo principal — cremoso */
+  --paper-dark: oklch(0.945 0.014 84);       /* sidebar, headers, hovers */
+  --ink: oklch(0.21 0.03 258);                /* tinta — navy-quase-preto, com leve frio */
+  --rule: oklch(0.78 0.02 80);                /* régua/divisor — bege escuro */
+  --money-up: oklch(0.46 0.105 145);          /* verde-floresta dimmed */
+  --money-down: oklch(0.48 0.16 30);          /* terracota — sangue avermelhado */
+  --accent-warm: oklch(0.55 0.13 70);         /* mostarda/ocre */
+  --accent-blue: oklch(0.62 0.17 240);        /* azul vivo (acctual) */
+  --accent-green: oklch(0.78 0.22 145);       /* verde neon-elétrico */
+  --accent-magenta: oklch(0.62 0.27 330);     /* magenta */
+  --accent-purple: oklch(0.55 0.22 290);      /* roxo */
+
+  /* shadcn tokens */
+  --background: var(--paper);
+  --foreground: var(--ink);
+
+  --card: oklch(0.992 0.005 90);              /* quase branco — papel mais limpo */
+  --card-foreground: var(--ink);
+
+  --popover: oklch(0.992 0.005 90);
+  --popover-foreground: var(--ink);
+
+  --primary: oklch(0.30 0.115 30);            /* burnt sienna profundo */
+  --primary-foreground: oklch(0.97 0.005 88);
+
+  --secondary: oklch(0.92 0.015 80);
+  --secondary-foreground: oklch(0.28 0.025 258);
+
+  --muted: oklch(0.92 0.011 82);
+  --muted-foreground: oklch(0.46 0.022 250);
+
+  --accent: oklch(0.88 0.04 70);
+  --accent-foreground: oklch(0.28 0.025 258);
+
+  --destructive: var(--money-down);
+
+  --border: oklch(0.86 0.012 82);
+  --input: oklch(0.88 0.012 82);
+  --ring: oklch(0.46 0.05 30);
+
+  --chart-1: var(--money-up);
+  --chart-2: var(--money-down);
+  --chart-3: var(--accent-warm);
+  --chart-4: oklch(0.40 0.08 250);
+  --chart-5: oklch(0.55 0.04 60);
+
+  --radius: 0.5rem;
+
+  --sidebar: var(--paper-dark);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: oklch(0.30 0.115 30);
+  --sidebar-primary-foreground: oklch(0.97 0.005 88);
+  --sidebar-accent: oklch(0.88 0.025 80);
+  --sidebar-accent-foreground: oklch(0.28 0.025 258);
+  --sidebar-border: oklch(0.84 0.014 82);
+  --sidebar-ring: oklch(0.46 0.05 30);
+}
+
+.dark {
+  /* Edição noturna — papel-azul, tinta cremosa */
+  --paper: oklch(0.18 0.025 258);
+  --paper-dark: oklch(0.15 0.025 258);
+  --ink: oklch(0.94 0.012 86);
+  --rule: oklch(0.32 0.025 250);
+  --money-up: oklch(0.74 0.16 145);
+  --money-down: oklch(0.72 0.18 28);
+  --accent-warm: oklch(0.78 0.13 70);
+  --accent-blue: oklch(0.74 0.16 240);
+  --accent-green: oklch(0.85 0.22 145);
+  --accent-magenta: oklch(0.74 0.27 330);
+  --accent-purple: oklch(0.70 0.22 290);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: oklch(0.21 0.025 258);
+  --card-foreground: var(--ink);
+  --popover: oklch(0.21 0.025 258);
+  --popover-foreground: var(--ink);
+  --primary: oklch(0.78 0.13 30);
+  --primary-foreground: oklch(0.18 0.025 258);
+  --secondary: oklch(0.26 0.025 250);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.24 0.022 250);
+  --muted-foreground: oklch(0.65 0.018 250);
+  --accent: oklch(0.30 0.04 80);
+  --accent-foreground: var(--ink);
+  --destructive: var(--money-down);
+  --border: oklch(0.30 0.022 250);
+  --input: oklch(0.30 0.022 250);
+  --ring: oklch(0.65 0.05 30);
+
+  --chart-1: var(--money-up);
+  --chart-2: var(--money-down);
+  --chart-3: var(--accent-warm);
+  --chart-4: oklch(0.65 0.12 250);
+  --chart-5: oklch(0.70 0.06 60);
+
+  --sidebar: var(--paper-dark);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: oklch(0.78 0.13 30);
+  --sidebar-primary-foreground: oklch(0.18 0.025 258);
+  --sidebar-accent: oklch(0.26 0.025 250);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: oklch(0.28 0.022 250);
+  --sidebar-ring: oklch(0.65 0.05 30);
+}
+
+/* ============================================================================
+   Base global
+   ============================================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    font-feature-settings: "ss01", "ss02", "cv11";
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Textura sutil de papel — SVG noise inline */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.025;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  .dark body::before {
+    opacity: 0.04;
+    mix-blend-mode: screen;
+  }
+
+  /* Aplicação consistente de tabular-nums em qualquer mono */
+  .font-mono,
+  [class*="font-mono"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Display class — Fraunces */
+  .font-display {
+    font-family: var(--font-display);
+    font-feature-settings: "ss01", "ss02";
+  }
+}
+
+/* ============================================================================
+   Componentes utilitários
+   ============================================================================ */
+@layer components {
+  /* Régua decorativa estilo jornal */
+  .editorial-rule {
+    @apply relative inline-flex items-center gap-2.5 text-muted-foreground;
+  }
+  .editorial-rule::before,
+  .editorial-rule::after {
+    content: "";
+    @apply h-px w-12 bg-rule;
+  }
+
+  /* Eyebrow — pequeno rótulo estilo editorial */
+  .eyebrow {
+    @apply text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  /* Headline serif */
+  .headline {
+    font-family: var(--font-display);
+    @apply text-foreground;
+    font-feature-settings: "ss01";
+    font-optical-sizing: auto;
+  }
+
+  /* Linha de ornamento entre seções */
+  .ornament-divider {
+    @apply flex items-center justify-center text-muted-foreground/60 my-2;
+  }
+  .ornament-divider::before,
+  .ornament-divider::after {
+    content: "";
+    @apply h-px flex-1 bg-border;
+  }
+  .ornament-divider > span {
+    @apply mx-3 text-xs;
+  }
+
+  /* Garante que conteúdo fique acima do noise */
+  main, aside, .toaster, .sonner-toast, [data-sonner-toaster] {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Handwritten annotation — Caveat rotacionada */
+  .handwritten {
+    font-family: var(--font-handwritten);
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: 500;
+    display: inline-block;
+    transform: rotate(-3deg);
+    white-space: nowrap;
+  }
+  .handwritten--right { transform: rotate(3.5deg); }
+  .handwritten--big   { transform: rotate(-4deg); font-size: 2.25rem; }
+  .handwritten--tilt  { transform: rotate(11deg); }
+  .handwritten--neg   { transform: rotate(-15deg); }
+
+  /* Color tags estilo SaaS — fundo soft, texto saturado */
+  .tag-blue    { background: color-mix(in oklch, var(--accent-blue) 14%, transparent); color: var(--accent-blue); }
+  .tag-green   { background: color-mix(in oklch, var(--money-up) 16%, transparent); color: var(--money-up); }
+  .tag-magenta { background: color-mix(in oklch, var(--accent-magenta) 14%, transparent); color: var(--accent-magenta); }
+  .tag-purple  { background: color-mix(in oklch, var(--accent-purple) 14%, transparent); color: var(--accent-purple); }
+  .tag-warm    { background: color-mix(in oklch, var(--accent-warm) 18%, transparent); color: var(--accent-warm); }
+  .tag-down    { background: color-mix(in oklch, var(--money-down) 14%, transparent); color: var(--money-down); }
+
+  .tag-pill {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium;
+  }
+
+  /* Pill CTA full-rounded estilo Acctual */
+  .pill-cta {
+    border-radius: 9999px;
+  }
+}
