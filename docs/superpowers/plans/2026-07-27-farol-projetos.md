@@ -1934,7 +1934,7 @@ export function resolveImport(
 npm test -- lib/domain/import-resolution.test.ts
 ```
 
-Esperado: PASS, 10 testes.
+Esperado: PASS, 9 testes.
 
 - [ ] **Step 5: Commit**
 
