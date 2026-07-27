@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDownIcon, ChevronRightIcon, DownloadIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, FileSpreadsheetIcon, FileTextIcon } from 'lucide-react';
 
 import type { ProjectRow } from '@/lib/supabase/types';
 import type { ProjectSummary, LineResult, AlertStatus } from '@/lib/domain/budget';
@@ -19,6 +19,12 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLinkItem,
+} from '@/components/ui/dropdown-menu';
 import { ProjectAlerts } from '@/components/project/project-alerts';
 import { TransferCapMeter } from '@/components/project/transfer-cap-meter';
 import { BudgetVsActualChart } from '@/components/charts/budget-vs-actual-chart';
@@ -88,10 +94,28 @@ export function ProjectDashboardView({
           >
             Editar
           </Button>
-          <Button variant="outline" disabled title="Disponível em breve">
-            <DownloadIcon className="size-4" />
-            Exportar
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" />}>
+              <DownloadIcon className="size-4" />
+              Exportar
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLinkItem
+                href={`/api/export?projeto=${project.id}&formato=xlsx`}
+                download
+              >
+                <FileSpreadsheetIcon />
+                Excel (.xlsx)
+              </DropdownMenuLinkItem>
+              <DropdownMenuLinkItem
+                href={`/api/export?projeto=${project.id}&formato=csv`}
+                download
+              >
+                <FileTextIcon />
+                CSV
+              </DropdownMenuLinkItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
