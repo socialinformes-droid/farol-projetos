@@ -1,6 +1,6 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
-import type { MonitoringRow } from '@/lib/supabase/types';
+import type { MonitoringRow, ActivityFindingRow } from '@/lib/supabase/types';
 import { loadProjectSummary } from './project-queries';
 import { loadPhysicalSchedule } from './physical-queries';
 import {
@@ -28,6 +28,22 @@ export async function loadMonitoring(id: string): Promise<MonitoringRow | null> 
   const supabase = createAdminClient();
   const { data } = await supabase.from('monitorings').select('*').eq('id', id).maybeSingle();
   return data ?? null;
+}
+
+/**
+ * Todas as marcações já persistidas de um projeto — só as resolvidas: um
+ * apontamento pendente nunca é gravado (ver `resolveFinding` em
+ * `lib/actions/findings-mutations.ts`). `detectFindings`/`resolvedFindings`
+ * (`lib/domain/monitoring-findings.ts`) cruzam esta lista com o snapshot do
+ * período.
+ */
+export async function loadActivityFindings(projectId: string): Promise<ActivityFindingRow[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('activity_findings')
+    .select('*')
+    .eq('project_id', projectId);
+  return data ?? [];
 }
 
 /**
