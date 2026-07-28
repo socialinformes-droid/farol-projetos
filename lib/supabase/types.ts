@@ -95,9 +95,55 @@ export type AppSettingsRow = {
   updated_at: string;
 };
 
+export type PhysicalActivityStatus = 'nao_iniciado' | 'em_andamento' | 'concluido';
+
+export type DeliverableRow = {
+  id: string;
+  project_id: string;
+  name: string;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ActivityRow = {
+  id: string;
+  project_id: string;
+  deliverable_id: string;
+  name: string;
+  responsible: string | null;
+  planned_start: string | null;
+  planned_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  sgf_actual_start: string | null;
+  sgf_actual_end: string | null;
+  sgf_status: string | null;
+  sgf_updated_at: string | null;
+  status: PhysicalActivityStatus;
+  sort_order: number;
+  import_key: string;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ActivityCommentRow = {
+  id: string;
+  activity_id: string;
+  author: string | null;
+  body: string;
+  happened_on: string;
+  created_at: string;
+};
+
 export type ProjectInsert = Omit<ProjectRow, 'id' | 'created_at' | 'updated_at'>;
 export type BudgetLineInsert = Omit<BudgetLineRow, 'id' | 'created_at' | 'updated_at'>;
 export type LedgerEntryInsert = Omit<LedgerEntryRow, 'id' | 'created_at' | 'updated_at'>;
+export type DeliverableInsert = Omit<DeliverableRow, 'id' | 'created_at' | 'updated_at'>;
+export type ActivityInsert = Omit<ActivityRow, 'id' | 'created_at' | 'updated_at'>;
+export type ActivityCommentInsert = Omit<ActivityCommentRow, 'id' | 'created_at'>;
 
 // `updated_at` não tem trigger no banco — a aplicação é quem o define a cada
 // update, por isso os tipos de Update (diferente dos de Insert) o incluem.
@@ -105,6 +151,8 @@ export type ProjectUpdate = Partial<Omit<ProjectRow, 'id' | 'created_at'>>;
 export type BudgetLineUpdate = Partial<Omit<BudgetLineRow, 'id' | 'created_at'>>;
 export type LedgerEntryUpdate = Partial<Omit<LedgerEntryRow, 'id' | 'created_at'>>;
 export type AppSettingsUpdate = Partial<Omit<AppSettingsRow, 'id'>>;
+export type DeliverableUpdate = Partial<Omit<DeliverableRow, 'id' | 'created_at'>>;
+export type ActivityUpdate = Partial<Omit<ActivityRow, 'id' | 'created_at'>>;
 
 export type Database = {
   public: {
@@ -114,6 +162,9 @@ export type Database = {
       ledger_entries: { Row: LedgerEntryRow;  Insert: LedgerEntryInsert;  Update: LedgerEntryUpdate; Relationships: [] };
       import_batches: { Row: ImportBatchRow;  Insert: Omit<ImportBatchRow, 'id' | 'imported_at'>; Update: Partial<ImportBatchRow>; Relationships: [] };
       app_settings:   { Row: AppSettingsRow;  Insert: AppSettingsRow;    Update: AppSettingsUpdate; Relationships: [] };
+      deliverables:      { Row: DeliverableRow;      Insert: DeliverableInsert;      Update: DeliverableUpdate;      Relationships: [] };
+      activities:        { Row: ActivityRow;         Insert: ActivityInsert;         Update: ActivityUpdate;         Relationships: [] };
+      activity_comments: { Row: ActivityCommentRow;  Insert: ActivityCommentInsert;  Update: Partial<ActivityCommentRow>; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
