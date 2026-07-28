@@ -12,11 +12,23 @@ export type EntryKind = 'despesa' | 'aporte' | 'manual' | 'ignorado';
  */
 export type FundingModel = 'adiantamento' | 'reembolso' | 'interno';
 
+/**
+ * Como o limite do projeto é controlado.
+ *
+ * por_rubrica — cada rubrica tem valor orçado e vale o teto de remanejamento
+ * global      — o limite é o total do projeto; as rubricas apenas classificam
+ *               o gasto, sem teto individual. Aqui não existe remanejamento
+ *               (não há valor de rubrica para estourar) e rubrica sem orçado é
+ *               o esperado, não uma pendência.
+ */
+export type BudgetControl = 'por_rubrica' | 'global';
+
 export type ProjectInput = {
   totalBudget: number;
   transferLimitPct: number;
   warningThresholdPct: number;
   fundingModel: FundingModel;
+  budgetControl: BudgetControl;
 };
 
 export type LineInput = {
@@ -86,6 +98,7 @@ export type ProjectSummary = {
    */
   cashBalance: number | null;
   fundingModel: FundingModel;
+  budgetControl: BudgetControl;
   unclassifiedTotal: number;
   linesWithoutBudget: number;
   overBudget: boolean;
@@ -178,23 +191,44 @@ export function summarizeProject(
   const tree = (byParent.get(null) ?? []).sort(sortLines).map(build);
 
   const realized = round2(classifiedRealized + unclassifiedTotal);
-  const transferCap = round2((project.totalBudget * project.transferLimitPct) / 100);
+
+  // No controle global as rubricas não têm valor próprio: não existe
+  // remanejamento a medir, e rubrica sem orçado é o desenho do projeto, não
+  // uma pendência de cadastro. Zerar aqui evita que o dashboard alarme sobre
+  // algo que não se aplica.
+  const global = project.budgetControl === 'global';
+  if (global) {
+    transferred = 0;
+    linesWithoutBudget = 0;
+  }
+
+  const transferCap = global
+    ? 0
+    : round2((project.totalBudget * project.transferLimitPct) / 100);
   transferred = round2(transferred);
 
   let capUsagePct: number;
   if (transferCap > 0) {
     capUsagePct = round2((transferred / transferCap) * 100);
   } else {
-    // Sem teto configurado, qualquer remanejamento já é violação.
-    capUsagePct = transferred > 0 ? 100 : 0;
+    // Sem teto configurado, qualquer remanejamento já é violação — exceto no
+    // controle global, onde a ausência de teto é intencional.
+    capUsagePct = !global && transferred > 0 ? 100 : 0;
   }
 
   const overBudget = realized > project.totalBudget;
-  const violated = transferred > transferCap || overBudget;
+  // No global o único limite é o total do projeto.
+  const violated = global ? overBudget : transferred > transferCap || overBudget;
 
   let status: AlertStatus = 'ok';
   if (violated) status = 'violacao';
-  else if (capUsagePct >= project.warningThresholdPct) status = 'aviso';
+  else if (!global && capUsagePct >= project.warningThresholdPct) status = 'aviso';
+  else if (global && project.totalBudget > 0) {
+    // Sem teto de remanejamento, o limiar de aviso passa a valer sobre a
+    // execução do orçamento — é o que resta para antecipar o estouro.
+    const execPct = round2((realized / project.totalBudget) * 100);
+    if (execPct >= project.warningThresholdPct) status = 'aviso';
+  }
 
   return {
     totalBudget: project.totalBudget,
@@ -210,6 +244,7 @@ export function summarizeProject(
     cashBalance:
       project.fundingModel === 'interno' ? null : round2(contributions - realized),
     fundingModel: project.fundingModel,
+    budgetControl: project.budgetControl,
     unclassifiedTotal: round2(unclassifiedTotal),
     linesWithoutBudget,
     overBudget,
@@ -228,6 +263,7 @@ export function toProjectInput(row: ProjectRow): ProjectInput {
     // Projetos criados antes da migration 0005 não têm o campo; o default do
     // banco é 'interno', que é também o comportamento antigo (sem bloco de caixa).
     fundingModel: row.funding_model ?? 'interno',
+    budgetControl: row.budget_control ?? 'por_rubrica',
   };
 }
 

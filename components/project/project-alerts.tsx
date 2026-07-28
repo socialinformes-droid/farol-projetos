@@ -45,12 +45,23 @@ export function ProjectAlerts({
   }
 
   if (summary.status === 'aviso') {
-    const remaining = summary.transferCap - summary.transferred;
-    alerts.push({
-      key: 'cap-warning',
-      severity: 'ambar',
-      message: `Remanejamento em ${Math.round(summary.capUsagePct)}% do teto — restam ${formatBRL(remaining)}.`,
-    });
+    if (summary.budgetControl === 'global') {
+      // Sem teto de remanejamento, o aviso é sobre a execução do total —
+      // falar de remanejamento aqui descreveria um controle que não existe
+      // neste projeto.
+      alerts.push({
+        key: 'execution-warning',
+        severity: 'ambar',
+        message: `Orçamento em ${Math.round(summary.executionPct)}% de execução — restam ${formatBRL(summary.available)}.`,
+      });
+    } else {
+      const remaining = summary.transferCap - summary.transferred;
+      alerts.push({
+        key: 'cap-warning',
+        severity: 'ambar',
+        message: `Remanejamento em ${Math.round(summary.capUsagePct)}% do teto — restam ${formatBRL(remaining)}.`,
+      });
+    }
   }
 
   if (summary.linesWithoutBudget > 0) {

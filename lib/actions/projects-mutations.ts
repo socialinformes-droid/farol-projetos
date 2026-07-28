@@ -16,6 +16,7 @@ function toRow(input: ProjectFormValues) {
     warning_threshold_pct: input.warningThresholdPct.toFixed(2),
     notes: input.notes,
     funding_model: input.fundingModel,
+    budget_control: input.budgetControl,
   };
 }
 

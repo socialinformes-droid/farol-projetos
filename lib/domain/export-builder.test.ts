@@ -37,6 +37,7 @@ const summary: ProjectSummary = {
   contributions: 41156.24,
   cashBalance: -7262.87,
   fundingModel: 'reembolso',
+  budgetControl: 'por_rubrica',
   unclassifiedTotal: 0,
   linesWithoutBudget: 1,
   overBudget: false,

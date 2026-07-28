@@ -49,6 +49,19 @@ const FUNDING_OPTIONS = [
   },
 ] as const;
 
+const CONTROL_OPTIONS = [
+  {
+    value: 'por_rubrica',
+    label: 'Por rubrica — cada rubrica tem limite',
+    hint: 'Vale o teto de remanejamento entre rubricas.',
+  },
+  {
+    value: 'global',
+    label: 'Global — o limite é o total do projeto',
+    hint: 'As rubricas só classificam o gasto, sem teto individual.',
+  },
+] as const;
+
 const STATUS_OPTIONS: { value: ProjectFormValues['status']; label: string }[] = [
   { value: 'planejamento', label: 'Planejamento' },
   { value: 'ativo', label: 'Ativo' },
@@ -78,6 +91,7 @@ export function ProjectForm({
       endDate: defaultValues?.endDate ?? null,
       status: defaultValues?.status ?? 'ativo',
       fundingModel: defaultValues?.fundingModel ?? 'interno',
+      budgetControl: defaultValues?.budgetControl ?? 'por_rubrica',
       transferLimitPct: defaultValues?.transferLimitPct ?? defaults?.transferLimitPct ?? 25,
       warningThresholdPct:
         defaultValues?.warningThresholdPct ?? defaults?.warningThresholdPct ?? 80,
@@ -148,6 +162,33 @@ export function ProjectForm({
                 ))}
               </SelectContent>
             </Select>
+          )}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="budgetControl">Controle do orçamento</Label>
+        <Controller
+          control={control}
+          name="budgetControl"
+          render={({ field }) => (
+            <>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="budgetControl" className="w-full">
+                  <SelectValue placeholder="Selecione o controle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTROL_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {CONTROL_OPTIONS.find((o) => o.value === field.value)?.hint}
+              </p>
+            </>
           )}
         />
       </div>

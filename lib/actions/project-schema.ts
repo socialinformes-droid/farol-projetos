@@ -25,6 +25,11 @@ export const projectFormSchema = z.object({
    * dos dois em projeto interno.
    */
   fundingModel: z.enum(['adiantamento', 'reembolso', 'interno']),
+  /**
+   * Controle por rubrica aplica o teto de remanejamento; global trata as
+   * rubricas como mera classificação, com o total do projeto como único limite.
+   */
+  budgetControl: z.enum(['por_rubrica', 'global']),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

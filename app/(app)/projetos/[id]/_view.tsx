@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, FileSpreadsheetIcon, FileTextIcon } from 'lucide-react';
 
 import type { ProjectRow } from '@/lib/supabase/types';
-import type { ProjectSummary, LineResult, AlertStatus } from '@/lib/domain/budget';
+import type {
+  ProjectSummary,
+  LineResult,
+  AlertStatus,
+  BudgetControl,
+} from '@/lib/domain/budget';
 import { formatBRL } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -144,15 +149,29 @@ export function ProjectDashboardView({
               : `${Math.round(100 - summary.executionPct)}% ainda disponível`
           }
         />
-        <KpiCard
-          label="Consumo do teto"
-          value={`${Math.round(summary.capUsagePct)}%`}
-          valueClassName={CAP_STATUS_TEXT[summary.status]}
-          hint="do remanejamento permitido"
-        />
+        {summary.budgetControl === 'global' ? (
+          <KpiCard
+            label="Execução"
+            value={`${Math.round(summary.executionPct)}%`}
+            valueClassName={CAP_STATUS_TEXT[summary.status]}
+            hint="do orçamento do projeto"
+          />
+        ) : (
+          <KpiCard
+            label="Consumo do teto"
+            value={`${Math.round(summary.capUsagePct)}%`}
+            valueClassName={CAP_STATUS_TEXT[summary.status]}
+            hint="do remanejamento permitido"
+          />
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-4',
+          summary.budgetControl === 'por_rubrica' && 'lg:grid-cols-2',
+        )}
+      >
         <Card>
           <CardContent className="flex flex-col gap-3">
             <p className="eyebrow">Execução do orçamento</p>
@@ -166,6 +185,7 @@ export function ProjectDashboardView({
           </CardContent>
         </Card>
 
+        {summary.budgetControl === 'por_rubrica' && (
         <Card>
           <CardContent className="flex flex-col gap-3">
             <p className="eyebrow">Teto de remanejamento</p>
@@ -178,6 +198,7 @@ export function ProjectDashboardView({
             />
           </CardContent>
         </Card>
+        )}
       </div>
 
       {summary.cashBalance !== null && (
@@ -208,11 +229,19 @@ export function ProjectDashboardView({
             <TableRow>
               <TableHead>Código</TableHead>
               <TableHead>Rubrica</TableHead>
-              <TableHead>Orçado</TableHead>
+              {/* Sem limite por rubrica, as colunas de orçado, saldo e excesso
+                  não têm o que mostrar — a tabela vira leitura de consumo. */}
+              {summary.budgetControl === 'por_rubrica' && <TableHead>Orçado</TableHead>}
               <TableHead>Realizado</TableHead>
-              <TableHead>Saldo</TableHead>
-              <TableHead>Excesso</TableHead>
-              <TableHead>% Execução</TableHead>
+              {summary.budgetControl === 'por_rubrica' ? (
+                <>
+                  <TableHead>Saldo</TableHead>
+                  <TableHead>Excesso</TableHead>
+                  <TableHead>% Execução</TableHead>
+                </>
+              ) : (
+                <TableHead>% do gasto</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -223,6 +252,8 @@ export function ProjectDashboardView({
                 depth={0}
                 collapsedIds={collapsedIds}
                 onToggleCollapse={toggleCollapse}
+                budgetControl={summary.budgetControl}
+                totalRealized={summary.realized}
               />
             ))}
           </TableBody>
@@ -276,14 +307,29 @@ function RubricaRow({
   depth,
   collapsedIds,
   onToggleCollapse,
+  budgetControl,
+  totalRealized,
 }: {
   line: LineResult;
   depth: number;
   collapsedIds: Set<string>;
   onToggleCollapse: (id: string) => void;
+  budgetControl: BudgetControl;
+  /** Base do "% do gasto" no controle global. */
+  totalRealized: number;
 }) {
+  const porRubrica = budgetControl === 'por_rubrica';
   const hasChildren = line.children.length > 0;
   const isCollapsed = collapsedIds.has(line.id);
+
+  // Por rubrica, o percentual é execução contra o próprio orçado. No global
+  // não há orçado, então o número que informa é a fatia da rubrica no gasto
+  // total do projeto.
+  const sharePct = porRubrica
+    ? line.executionPct
+    : totalRealized > 0
+      ? (line.realized / totalRealized) * 100
+      : null;
 
   return (
     <>
@@ -310,7 +356,7 @@ function RubricaRow({
               <span className="inline-block size-6" />
             )}
             <span>{line.name}</span>
-            {!line.isControl && (
+            {porRubrica && !line.isControl && (
               <Badge
                 variant="outline"
                 className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400"
@@ -320,29 +366,35 @@ function RubricaRow({
             )}
           </div>
         </TableCell>
-        <TableCell>{line.budgeted === null ? '—' : formatBRL(line.budgeted)}</TableCell>
+        {porRubrica && (
+          <TableCell>{line.budgeted === null ? '—' : formatBRL(line.budgeted)}</TableCell>
+        )}
         <TableCell>{formatBRL(line.realized)}</TableCell>
-        <TableCell
-          className={line.balance !== null && line.balance < 0 ? 'text-destructive' : undefined}
-        >
-          {line.balance === null ? '—' : formatBRL(line.balance)}
-        </TableCell>
-        <TableCell className={line.excess > 0 ? 'text-destructive' : undefined}>
-          {line.excess > 0 ? formatBRL(line.excess) : '—'}
-        </TableCell>
+        {porRubrica && (
+          <TableCell
+            className={line.balance !== null && line.balance < 0 ? 'text-destructive' : undefined}
+          >
+            {line.balance === null ? '—' : formatBRL(line.balance)}
+          </TableCell>
+        )}
+        {porRubrica && (
+          <TableCell className={line.excess > 0 ? 'text-destructive' : undefined}>
+            {line.excess > 0 ? formatBRL(line.excess) : '—'}
+          </TableCell>
+        )}
         <TableCell>
           <div className="flex items-center gap-2">
             <span className="text-xs tabular-nums">
-              {line.executionPct === null ? '—' : `${Math.round(line.executionPct)}%`}
+              {sharePct === null ? '—' : `${Math.round(sharePct)}%`}
             </span>
-            {line.executionPct !== null && (
+            {sharePct !== null && (
               <div className="h-1 w-14 overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
                     'h-full rounded-full',
-                    line.executionPct > 100 ? 'bg-destructive' : 'bg-primary',
+                    porRubrica && sharePct > 100 ? 'bg-destructive' : 'bg-primary',
                   )}
-                  style={{ width: `${Math.min(100, line.executionPct)}%` }}
+                  style={{ width: `${Math.min(100, sharePct)}%` }}
                 />
               </div>
             )}
@@ -359,6 +411,8 @@ function RubricaRow({
             depth={depth + 1}
             collapsedIds={collapsedIds}
             onToggleCollapse={onToggleCollapse}
+            budgetControl={budgetControl}
+            totalRealized={totalRealized}
           />
         ))}
     </>

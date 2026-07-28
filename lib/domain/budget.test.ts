@@ -6,6 +6,7 @@ const project: ProjectInput = {
   transferLimitPct: 25,
   warningThresholdPct: 80,
   fundingModel: 'interno',
+  budgetControl: 'por_rubrica',
 };
 
 function line(id: string, budgeted: number | null, parentId: string | null = null): LineInput {
@@ -106,7 +107,7 @@ describe('summarizeProject', () => {
   });
 
   it('respeita limites customizados do projeto', () => {
-    const custom: ProjectInput = { totalBudget: 200, transferLimitPct: 10, warningThresholdPct: 50 , fundingModel: 'interno' };
+    const custom: ProjectInput = { totalBudget: 200, transferLimitPct: 10, warningThresholdPct: 50 , fundingModel: 'interno', budgetControl: 'por_rubrica' };
     const s = summarizeProject(custom, [line('a', 100)], [entry('a', 111)]);
     expect(s.transferCap).toBe(20);
     expect(s.transferred).toBe(11);
@@ -115,7 +116,7 @@ describe('summarizeProject', () => {
   });
 
   it('trata teto zero sem dividir por zero', () => {
-    const zero: ProjectInput = { totalBudget: 100, transferLimitPct: 0, warningThresholdPct: 80 , fundingModel: 'interno' };
+    const zero: ProjectInput = { totalBudget: 100, transferLimitPct: 0, warningThresholdPct: 80 , fundingModel: 'interno', budgetControl: 'por_rubrica' };
     const semEstouro = summarizeProject(zero, [line('a', 10)], [entry('a', 8)]);
     expect(semEstouro.capUsagePct).toBe(0);
     expect(semEstouro.status).toBe('ok');
@@ -198,5 +199,45 @@ describe('summarizeProject', () => {
     expect(s.realized).toBe(8);
     expect(s.contributions).toBe(0);
     expect(s.transferred).toBe(0);
+  });
+
+  it('controle global não mede remanejamento', () => {
+    // Rubricas sem valor próprio: gastar mais numa não é estourar nada.
+    const g: ProjectInput = { ...project, budgetControl: 'global' };
+    const s = summarizeProject(g, [line('a', null), line('b', null)], [entry('a', 80), entry('b', 15)]);
+    expect(s.transferred).toBe(0);
+    expect(s.transferCap).toBe(0);
+    expect(s.capUsagePct).toBe(0);
+    expect(s.realized).toBe(95);
+  });
+
+  it('controle global não acusa rubrica sem orçamento', () => {
+    // O campo vazio é o desenho do projeto, não pendência de cadastro.
+    const g: ProjectInput = { ...project, budgetControl: 'global' };
+    const s = summarizeProject(g, [line('a', null)], [entry('a', 50)]);
+    expect(s.linesWithoutBudget).toBe(0);
+    expect(s.status).toBe('ok');
+  });
+
+  it('controle global avisa pela execução ao passar do limiar', () => {
+    // Sem teto de remanejamento, o limiar de aviso passa a valer sobre o total.
+    const g: ProjectInput = { ...project, budgetControl: 'global' };
+    const s = summarizeProject(g, [line('a', null)], [entry('a', 85)]);
+    expect(s.executionPct).toBe(85);
+    expect(s.status).toBe('aviso');
+  });
+
+  it('controle global viola só ao estourar o total do projeto', () => {
+    const g: ProjectInput = { ...project, budgetControl: 'global' };
+    const s = summarizeProject(g, [line('a', null)], [entry('a', 120)]);
+    expect(s.overBudget).toBe(true);
+    expect(s.status).toBe('violacao');
+  });
+
+  it('por rubrica segue medindo remanejamento normalmente', () => {
+    const s = summarizeProject(project, [line('a', 10), line('b', 10)], [entry('a', 22), entry('b', 18)]);
+    expect(s.budgetControl).toBe('por_rubrica');
+    expect(s.transferred).toBe(20);
+    expect(s.capUsagePct).toBe(80);
   });
 });

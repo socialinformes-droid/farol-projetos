@@ -1,6 +1,7 @@
 export type ProjectStatus = 'planejamento' | 'ativo' | 'encerrado';
 export type EntryKind = 'despesa' | 'aporte' | 'manual' | 'ignorado';
 export type FundingModel = 'adiantamento' | 'reembolso' | 'interno';
+export type BudgetControl = 'por_rubrica' | 'global';
 export type EntrySource = 'import' | 'manual';
 
 export type EntryUrls = {
@@ -21,6 +22,7 @@ export type ProjectRow = {
   transfer_limit_pct: string;
   warning_threshold_pct: string;
   funding_model: FundingModel;
+  budget_control: BudgetControl;
   notes: string | null;
   created_at: string;
   updated_at: string;
