@@ -164,6 +164,31 @@ export type MonitoringRow = {
   updated_at: string;
 };
 
+export type FindingKind = 'atraso' | 'sem_justificativa' | 'risco' | 'beneficio' | 'outro';
+export type FindingResolution = 'pendente' | 'justificado' | 'replanejado' | 'dispensado';
+
+/**
+ * Apontamento levantado na análise do período (migração 0010) — ver o
+ * comentário da migração para o desenho completo. Uma linha só existe para
+ * um par (activity_id, kind) já resolvido pelo gestor; enquanto pendente, o
+ * apontamento não é persistido — `lib/domain/monitoring-findings.ts` o
+ * recalcula a cada análise a partir do snapshot.
+ */
+export type ActivityFindingRow = {
+  id: string;
+  project_id: string;
+  activity_id: string;
+  kind: FindingKind;
+  resolution: FindingResolution;
+  note: string | null;
+  planned_start_at_resolution: string | null;
+  planned_end_at_resolution: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectInsert = Omit<ProjectRow, 'id' | 'created_at' | 'updated_at'>;
 export type BudgetLineInsert = Omit<BudgetLineRow, 'id' | 'created_at' | 'updated_at'>;
 export type LedgerEntryInsert = Omit<LedgerEntryRow, 'id' | 'created_at' | 'updated_at'>;
@@ -171,6 +196,7 @@ export type DeliverableInsert = Omit<DeliverableRow, 'id' | 'created_at' | 'upda
 export type ActivityInsert = Omit<ActivityRow, 'id' | 'created_at' | 'updated_at'>;
 export type ActivityCommentInsert = Omit<ActivityCommentRow, 'id' | 'created_at'>;
 export type MonitoringInsert = Omit<MonitoringRow, 'id' | 'created_at' | 'updated_at'>;
+export type ActivityFindingInsert = Omit<ActivityFindingRow, 'id' | 'created_at' | 'updated_at'>;
 
 // `updated_at` não tem trigger no banco — a aplicação é quem o define a cada
 // update, por isso os tipos de Update (diferente dos de Insert) o incluem.
@@ -181,6 +207,7 @@ export type AppSettingsUpdate = Partial<Omit<AppSettingsRow, 'id'>>;
 export type DeliverableUpdate = Partial<Omit<DeliverableRow, 'id' | 'created_at'>>;
 export type ActivityUpdate = Partial<Omit<ActivityRow, 'id' | 'created_at'>>;
 export type MonitoringUpdate = Partial<Omit<MonitoringRow, 'id' | 'created_at'>>;
+export type ActivityFindingUpdate = Partial<Omit<ActivityFindingRow, 'id' | 'created_at'>>;
 
 export type Database = {
   public: {
@@ -194,6 +221,7 @@ export type Database = {
       activities:        { Row: ActivityRow;         Insert: ActivityInsert;         Update: ActivityUpdate;         Relationships: [] };
       activity_comments: { Row: ActivityCommentRow;  Insert: ActivityCommentInsert;  Update: Partial<ActivityCommentRow>; Relationships: [] };
       monitorings:       { Row: MonitoringRow;       Insert: MonitoringInsert;       Update: MonitoringUpdate;       Relationships: [] };
+      activity_findings: { Row: ActivityFindingRow;  Insert: ActivityFindingInsert;  Update: ActivityFindingUpdate;  Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
