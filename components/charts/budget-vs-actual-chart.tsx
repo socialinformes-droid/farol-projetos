@@ -15,10 +15,26 @@ import type { LineResult } from '@/lib/domain/budget';
 import { formatBRL } from '@/lib/format';
 
 type ChartRow = {
+  /** Rótulo do eixo: nome da rubrica, encurtado para caber. */
   name: string;
+  /** Nome completo, exibido no tooltip. */
+  fullName: string;
+  /** Código contábil, exibido junto do nome no tooltip. */
+  code: string | null;
   orcado: number;
   realizado: number;
 };
+
+const MAX_LABEL = 24;
+
+/**
+ * O eixo mostra o NOME da rubrica, não o código contábil: "Passagens
+ * Nacionais" se lê, "31010401001" não. O código continua acessível no
+ * tooltip, para conferir contra o razão sem poluir o gráfico.
+ */
+function axisLabel(name: string): string {
+  return name.length > MAX_LABEL ? `${name.slice(0, MAX_LABEL - 1).trimEnd()}…` : name;
+}
 
 /**
  * Uma barra por rubrica de controle (budgeted !== null), em qualquer nível da
@@ -33,7 +49,9 @@ function collectRows(lines: LineResult[]): ChartRow[] {
     const isLeaf = line.children.length === 0;
     if (line.isControl || (isLeaf && line.realized > 0)) {
       rows.push({
-        name: line.code ? `${line.code}` : line.name,
+        name: axisLabel(line.name),
+        fullName: line.name,
+        code: line.code,
         orcado: line.budgeted ?? 0,
         realizado: line.realized,
       });
@@ -64,9 +82,9 @@ export function BudgetVsActualChart({ lines }: { lines: LineResult[] }) {
             tick={{ fontSize: 11 }}
             className="fill-muted-foreground"
             interval={0}
-            angle={-20}
+            angle={-25}
             textAnchor="end"
-            height={50}
+            height={72}
           />
           <YAxis
             tickFormatter={(value: number) => formatBRL(value)}
@@ -76,6 +94,14 @@ export function BudgetVsActualChart({ lines }: { lines: LineResult[] }) {
           />
           <Tooltip
             formatter={(value) => formatBRL(Number(value))}
+            // O eixo mostra o nome encurtado; aqui vai o nome inteiro com o
+            // código contábil ao lado, que é o que permite conferir a linha
+            // contra o razão.
+            labelFormatter={(_label, payload) => {
+              const row = payload?.[0]?.payload as ChartRow | undefined;
+              if (!row) return '';
+              return row.code ? `${row.fullName} (${row.code})` : row.fullName;
+            }}
             contentStyle={{
               background: 'var(--popover)',
               color: 'var(--popover-foreground)',
