@@ -131,18 +131,25 @@ export function resolveImport(
     }
     if (key !== null) seen.add(key);
 
-    const existingLine = (context.budgetLinesByProject[project.id] ?? []).find(
-      (l) => l.code === entry.accountCode,
-    );
+    // Aporte é entrada de recurso, não gasto: não pertence a rubrica nenhuma.
+    // Criar uma rubrica para a conta de receita poluiria a tela de orçamento e
+    // o gráfico com uma linha que nunca terá valor orçado.
+    const isAporte = entry.kind === 'aporte';
 
-    if (!existingLine) {
+    const existingLine = isAporte
+      ? undefined
+      : (context.budgetLinesByProject[project.id] ?? []).find(
+          (l) => l.code === entry.accountCode,
+        );
+
+    if (!isAporte && !existingLine) {
       plan.unmappedCount += 1;
       if (!plan.newBudgetLines.some((l) => l.code === entry.accountCode)) {
         plan.newBudgetLines.push({ code: entry.accountCode, name: entry.accountName });
       }
     }
 
-    if (entry.kind === 'aporte') {
+    if (isAporte) {
       // Sinal invertido: o razão lança o aporte como crédito negativo.
       plan.contributionTotal = round2(plan.contributionTotal + Math.abs(entry.amount));
     } else {

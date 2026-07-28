@@ -136,4 +136,28 @@ describe('resolveImport', () => {
     expect(plan.projects).toHaveLength(0);
     expect(plan.unknownCenters).toHaveLength(0);
   });
+
+  it('aporte não cria rubrica nem conta como não mapeado', () => {
+    // A conta de receita não é rubrica de gasto: criar uma poluiria a tela de
+    // orçamento e o gráfico com uma linha que nunca teria valor orçado.
+    const aporte = entry({
+      kind: 'aporte',
+      amount: -41156.24,
+      accountCode: '41020304001',
+      accountName: 'Projetos Estratégicos',
+      voucher: 'RECEITAS1',
+    });
+    const plan = resolveImport([aporte], context);
+    expect(plan.projects[0].newBudgetLines).toHaveLength(0);
+    expect(plan.projects[0].unmappedCount).toBe(0);
+    expect(plan.projects[0].newEntries[0].budgetLineId).toBeNull();
+    expect(plan.projects[0].contributionTotal).toBe(41156.24);
+  });
+
+  it('despesa continua criando rubrica quando a conta é nova', () => {
+    const nova = entry({ accountCode: '31010499001', accountName: 'Conta Nova', voucher: 'C9' });
+    const plan = resolveImport([nova], context);
+    expect(plan.projects[0].newBudgetLines).toHaveLength(1);
+    expect(plan.projects[0].unmappedCount).toBe(1);
+  });
 });
