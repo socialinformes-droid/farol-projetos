@@ -28,6 +28,8 @@ O manual do PMO proíbe expressamente frases genéricas como "projeto em andamen
 
 Você não pode inventar. Risco, benefício e decisão de replanejamento exigem julgamento humano que você não tem: são o gestor e a Diretoria de Núcleo (DN) que avaliam isso, não você. Sempre que o registro factual fornecido não sustentar uma afirmação — um risco que não foi registrado, um benefício que não foi descrito, uma avaliação de cronograma que depende de contexto que você não recebeu — escreva um marcador entre colchetes no formato "[a confirmar: o que falta]" em vez de uma frase plausível. Um risco inventado que passa pela revisão do gestor e do DN vira compromisso formal com o PMO — é exatamente o erro que você precisa evitar.
 
+A mensagem pode trazer uma seção "Documento do projeto": é um trecho do relatório de projeto do SGF (justificativa, objetivo geral, objetivos específicos, escopo), que descreve o que foi PROMETIDO ao projeto. Use-a somente para redigir com precisão o objetivo e o escopo do projeto. Ela NÃO é evidência de execução: nunca a use para afirmar que algo foi entregue, iniciado ou concluído — isso só pode vir do registro factual do período, abaixo dela. Confundir o que foi prometido com o que foi feito produziria um relato falso de execução.
+
 O registro factual pode trazer "Apontamentos resolvidos pelo gestor": use-os assim —
 - Um apontamento marcado JUSTIFICADO: a observação do gestor é um FATO apurado. Pode afirmá-la no texto, sem "[a confirmar]".
 - Um apontamento marcado REPLANEJADO: a data prevista mudou no SGF, então isto NÃO é atraso. Mesmo que o registro factual ainda mostre dias de diferença frente a uma data antiga, você não pode descrever isto como atraso — descreva-o como um replanejamento.
@@ -146,15 +148,30 @@ function buildFactSheet(s: MonitoringSnapshot, resolvedFindingsList: ResolvedFin
   return parts.join('\n');
 }
 
+/**
+ * Seção delimitada com o documento do projeto (justificativa/objetivo/escopo
+ * extraídos do PDF do SGF, ver `lib/domain/project-context.ts`), quando o
+ * gestor anexou um. Vem ANTES do registro factual e é rotulada explicitamente
+ * como "o que foi prometido", nunca como execução — ver a instrução
+ * correspondente no `SYSTEM_PROMPT`.
+ */
+function buildProjectContextSection(projectContext: string): string {
+  return `Documento do projeto (o que foi PROMETIDO — objetivo e escopo do projeto, extraído do relatório do SGF. NÃO é evidência de execução; não descreva nada daqui como feito, iniciado ou concluído):\n\n${projectContext}\n\n---\n\n`;
+}
+
 export function buildMonitoringPromptMessages(
   snapshot: MonitoringSnapshot,
   resolvedFindingsList: ResolvedFinding[] = [],
+  projectContext?: string | null,
 ): ChatMessage[] {
+  const trimmedContext = projectContext?.trim();
+  const contextSection = trimmedContext ? buildProjectContextSection(trimmedContext) : '';
+
   return [
     { role: 'system', content: SYSTEM_PROMPT },
     {
       role: 'user',
-      content: `Registro factual do período (dados já apurados pelo Farol de Projetos — não recalcule nada, apenas escreva a prosa dos cinco campos a partir destes fatos):\n\n${buildFactSheet(snapshot, resolvedFindingsList)}`,
+      content: `${contextSection}Registro factual do período (dados já apurados pelo Farol de Projetos — não recalcule nada, apenas escreva a prosa dos cinco campos a partir destes fatos):\n\n${buildFactSheet(snapshot, resolvedFindingsList)}`,
     },
   ];
 }

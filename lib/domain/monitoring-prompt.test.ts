@@ -143,6 +143,31 @@ describe('buildMonitoringPromptMessages', () => {
     expect(user.content.toLowerCase()).toContain('fato');
   });
 
+  it('quando há documento do projeto, a mensagem user traz uma seção delimitada com o texto e o aviso de que não é evidência de execução', () => {
+    const [system, user] = buildMonitoringPromptMessages(
+      snapshot(),
+      [],
+      'JUSTIFICATIVA\nEste projeto visa capacitar equipes de SST em todo o estado.\nOBJETIVO GERAL\nReduzir acidentes de trabalho.',
+    );
+    expect(user.content).toContain('Documento do projeto');
+    expect(user.content).toContain('capacitar equipes de SST');
+    expect(user.content).toContain('Reduzir acidentes de trabalho');
+    expect(user.content.toLowerCase()).toContain('não é evidência de execução');
+    expect(system.content.toLowerCase()).toContain('documento do projeto');
+  });
+
+  it('quando não há documento do projeto, a mensagem user não traz a seção "Documento do projeto"', () => {
+    const [, user] = buildMonitoringPromptMessages(snapshot());
+    expect(user.content).not.toContain('Documento do projeto');
+  });
+
+  it('documento do projeto vazio ou só espaços em branco também omite a seção', () => {
+    const [, userEmpty] = buildMonitoringPromptMessages(snapshot(), [], '');
+    expect(userEmpty.content).not.toContain('Documento do projeto');
+    const [, userBlank] = buildMonitoringPromptMessages(snapshot(), [], '   \n  ');
+    expect(userBlank.content).not.toContain('Documento do projeto');
+  });
+
   it('apontamento REPLANEJADO é descrito explicitamente como NÃO sendo atraso', () => {
     const replanejado: ResolvedFinding = {
       activityId: 'a2',

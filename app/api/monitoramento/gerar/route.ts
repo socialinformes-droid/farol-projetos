@@ -82,9 +82,15 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: projectRow } = await supabase
+    .from('projects')
+    .select('context_document')
+    .eq('id', monitoring.project_id)
+    .maybeSingle();
+
   try {
     const resolved = resolvedFindings(snapshot, existingFindings);
-    const messages = buildMonitoringPromptMessages(snapshot, resolved);
+    const messages = buildMonitoringPromptMessages(snapshot, resolved, projectRow?.context_document);
     const raw = await generateText(messages);
     const fields = parseAiFields(raw);
 
