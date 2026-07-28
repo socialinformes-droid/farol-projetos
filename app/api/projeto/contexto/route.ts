@@ -13,8 +13,11 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
  * Action), como qualquer outro campo.
  */
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get('file');
+  // `formData()` lança quando o corpo não é multipart — antes de qualquer
+  // validação nossa. Sem este try, uma requisição sem arquivo vira 500 em vez
+  // da mensagem que explica o que fazer.
+  const formData = await request.formData().catch(() => null);
+  const file = formData?.get('file');
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'Envie um arquivo PDF.' }, { status: 400 });
