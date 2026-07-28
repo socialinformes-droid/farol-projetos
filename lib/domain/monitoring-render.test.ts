@@ -82,6 +82,7 @@ describe('renderMonitoringMarkdown', () => {
       responsible: 'Fulano',
       actualStart: '2026-07-01',
       actualEnd: '2026-07-15',
+      plannedStart: null,
       plannedEnd: '2026-07-10',
       overdueDays: 5,
     };
@@ -91,6 +92,7 @@ describe('renderMonitoringMarkdown', () => {
       name: 'Atividade 2',
       responsible: 'Beltrano',
       actualStart: '2026-07-20',
+      plannedStart: null,
       plannedEnd: '2026-08-10',
     };
     const delayed: DelayedActivity = {
@@ -98,6 +100,7 @@ describe('renderMonitoringMarkdown', () => {
       deliverableName: 'Entrega C',
       name: 'Atividade 3',
       responsible: 'Ciclano',
+      plannedStart: null,
       plannedEnd: '2026-07-20',
       daysLate: 16,
       status: 'em_aberto',
@@ -124,6 +127,7 @@ describe('renderMonitoringMarkdown', () => {
       id: 'd1',
       name: 'Entrega A',
       concludedAt: '2026-07-20',
+      closingActivityId: 'act-fech',
       activityCount: 4,
     };
     const snapshot = emptySnapshot({ concludedDeliverables: [deliverable] });
@@ -187,6 +191,7 @@ describe('renderMonitoringMarkdown', () => {
       deliverableName: 'Entrega C',
       name: 'Atividade 3',
       responsible: 'Ciclano',
+      plannedStart: null,
       plannedEnd: '2026-07-20',
       daysLate: 16,
       status: 'em_aberto',
@@ -207,6 +212,7 @@ describe('renderMonitoringMarkdown', () => {
       deliverableName: 'Entrega C',
       name: 'Atividade 3',
       responsible: 'Ciclano',
+      plannedStart: null,
       plannedEnd: '2026-07-20',
       daysLate: 16,
       status: 'em_aberto',

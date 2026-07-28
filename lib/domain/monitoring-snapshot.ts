@@ -56,6 +56,8 @@ export type ConcludedActivity = {
   responsible: string | null;
   actualStart: string | null;
   actualEnd: string;
+  /** Planejado vigente — usado por `monitoring-findings.ts` para detectar quando o SGF replanejou a atividade. */
+  plannedStart: string | null;
   plannedEnd: string | null;
   /** max(0, real − planejado), em dias. Zero quando não há planejado ou não houve atraso. */
   overdueDays: number;
@@ -67,6 +69,7 @@ export type InProgressActivity = {
   name: string;
   responsible: string | null;
   actualStart: string;
+  plannedStart: string | null;
   plannedEnd: string | null;
 };
 
@@ -75,6 +78,7 @@ export type DelayedActivity = {
   deliverableName: string;
   name: string;
   responsible: string | null;
+  plannedStart: string | null;
   plannedEnd: string;
   /** Dias de atraso: contra a data de referência (em_aberto) ou contra a
    * conclusão real (concluida_com_atraso). */
@@ -87,6 +91,8 @@ export type ConcludedDeliverableInfo = {
   name: string;
   /** Data da última atividade concluída — o que "fechou" a entrega. */
   concludedAt: string;
+  /** Atividade cujo `actualEnd` fechou a entrega — é a atividade que `monitoring-findings.ts` associa ao apontamento de "benefício não descrito" (a tabela `activity_findings` exige um `activity_id`, não há FK para entrega). */
+  closingActivityId: string;
   activityCount: number;
 };
 
@@ -191,6 +197,7 @@ export function buildMonitoringSnapshot(args: {
         responsible: a.responsible,
         actualStart: a.actualStart,
         actualEnd,
+        plannedStart: a.plannedStart,
         plannedEnd: a.plannedEnd,
         overdueDays,
       });
@@ -200,6 +207,7 @@ export function buildMonitoringSnapshot(args: {
           deliverableName: a.deliverableName,
           name: a.name,
           responsible: a.responsible,
+          plannedStart: a.plannedStart,
           plannedEnd: a.plannedEnd as string,
           daysLate: overdueDays,
           status: 'concluida_com_atraso',
@@ -215,6 +223,7 @@ export function buildMonitoringSnapshot(args: {
         name: a.name,
         responsible: a.responsible,
         actualStart: a.actualStart,
+        plannedStart: a.plannedStart,
         plannedEnd: a.plannedEnd,
       });
     }
@@ -225,6 +234,7 @@ export function buildMonitoringSnapshot(args: {
         deliverableName: a.deliverableName,
         name: a.name,
         responsible: a.responsible,
+        plannedStart: a.plannedStart,
         plannedEnd: a.plannedEnd,
         daysLate: diffDays(referenceDate, a.plannedEnd),
         status: 'em_aberto',
@@ -245,16 +255,18 @@ export function buildMonitoringSnapshot(args: {
     if (acts.length === 0) continue;
     if (!acts.every((a) => a.actualEnd !== null)) continue;
 
-    const lastConcludedAt = acts.reduce(
-      (max, a) => (a.actualEnd! > max ? a.actualEnd! : max),
-      acts[0].actualEnd!,
-    );
+    // A atividade que fechou a entrega. `activity_findings` referencia
+    // atividade, não entrega — então o apontamento de "benefício não descrito"
+    // precisa se ancorar nesta.
+    const closing = acts.reduce((last, a) => (a.actualEnd! > last.actualEnd! ? a : last), acts[0]);
+    const lastConcludedAt = closing.actualEnd!;
     if (lastConcludedAt < period.start || lastConcludedAt > period.end) continue;
 
     concludedDeliverables.push({
       id: d.id,
       name: d.name,
       concludedAt: lastConcludedAt,
+      closingActivityId: closing.id,
       activityCount: acts.length,
     });
   }

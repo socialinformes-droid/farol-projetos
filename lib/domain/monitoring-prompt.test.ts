@@ -86,6 +86,7 @@ describe('buildMonitoringPromptMessages', () => {
       responsible: 'Fulano',
       actualStart: '2026-07-01',
       actualEnd: '2026-07-20',
+      plannedStart: null,
       plannedEnd: '2026-07-15',
       overdueDays: 5,
     };
@@ -94,6 +95,7 @@ describe('buildMonitoringPromptMessages', () => {
       deliverableName: 'Entrega B',
       name: 'Atividade Atrasada',
       responsible: 'Beltrano',
+      plannedStart: null,
       plannedEnd: '2026-07-10',
       daysLate: 26,
       status: 'em_aberto',
