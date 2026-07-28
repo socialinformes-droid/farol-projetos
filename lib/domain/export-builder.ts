@@ -70,7 +70,7 @@ export function buildEntriesSheet(
   const rows: Sheet = [
     [
       'Data', 'Rubrica', 'Conta', 'Descrição', 'Fornecedor', 'CNPJ/CPF', 'Valor',
-      'Tipo', 'Origem', 'Comprovante', 'Diário', 'Nota fiscal', 'URL comprovante',
+      'Tipo', 'Origem', 'Comprovante', 'Diário', 'Nota fiscal', 'URL comprovante', 'Observações',
     ],
   ];
 
@@ -91,6 +91,7 @@ export function buildEntriesSheet(
       e.journal ?? '',
       e.urls?.nota_fiscal ?? '',
       e.urls?.comprovante ?? '',
+      e.notes ?? '',
     ]);
   }
 

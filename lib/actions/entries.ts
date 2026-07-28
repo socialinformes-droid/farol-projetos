@@ -5,6 +5,12 @@
 // um valor (objeto Zod). O schema/tipos vivem em `./entry-schema` e a
 // implementação das actions (que de fato usa 'use server') vive em
 // `./entries-mutations`. Este módulo só reexporta os dois.
-export type { EntryFormValues } from './entry-schema';
-export { entryFormSchema } from './entry-schema';
-export { createEntry, updateEntry, deleteEntry, reclassifyEntry } from './entries-mutations';
+export type { EntryFormValues, EntryDetailsValues } from './entry-schema';
+export { entryFormSchema, entryDetailsSchema } from './entry-schema';
+export {
+  createEntry,
+  updateEntry,
+  updateEntryDetails,
+  deleteEntry,
+  reclassifyEntry,
+} from './entries-mutations';

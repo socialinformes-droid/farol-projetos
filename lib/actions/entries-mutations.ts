@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { ActionResult } from './project-schema';
-import { entryFormSchema, type EntryFormValues } from './entry-schema';
+import {
+  entryFormSchema,
+  entryDetailsSchema,
+  type EntryFormValues,
+  type EntryDetailsValues,
+} from './entry-schema';
 
 function revalidateEntry(projectId: string) {
   revalidatePath(`/projetos/${projectId}`);
@@ -47,6 +52,7 @@ export async function createEntry(
       document_date: null,
       urls: {},
       source: 'manual',
+      notes: null,
     // Lançamento manual não vem do razão: sem chave de idempotência.
     import_key: null,
       import_batch_id: null,
@@ -75,11 +81,11 @@ export async function updateEntry(
 
   const supabase = createAdminClient();
 
-  // Mesma trava do deleteEntry: um lançamento importado espelha o razão e não
-  // pode ser editado aqui. Alterar valor ou descrição faria a tela divergir do
-  // sistema contábil sem deixar rastro — e a descrição compõe a chave de
-  // idempotência, então editá-la faria o próximo import reinserir a linha.
-  // A UI já desabilita o botão; esta é a trava que vale.
+  // Valor, data e descrição de um lançamento importado espelham o razão:
+  // alterá-los faria a tela divergir da contabilidade sem deixar rastro, e o
+  // número do dashboard deixaria de ser conferível contra o sistema de origem.
+  // Anexos e observações não têm esse problema e são editáveis por
+  // `updateEntryDetails`; reclassificar também é sempre permitido.
   const { data: existing } = await supabase
     .from('ledger_entries')
     .select('source')
@@ -91,7 +97,7 @@ export async function updateEntry(
     return {
       ok: false,
       error:
-        'Lançamentos importados do razão não podem ser editados. Reclassifique-o ou ajuste no sistema de origem.',
+        'Lançamentos importados do razão não podem ter valor, data ou descrição alterados. Você pode editar os anexos e as observações.',
     };
   }
 
@@ -165,6 +171,58 @@ export async function deleteEntry(id: string): Promise<ActionResult> {
   }
 
   const { error } = await supabase.from('ledger_entries').delete().eq('id', id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidateEntry(entry.project_id);
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Edita os anexos e a observação do lançamento. Vale para qualquer origem,
+ * inclusive importado do razão.
+ *
+ * O razão do Genus traz o comprovante bancário na maioria das linhas, mas a
+ * nota fiscal quase nunca — quando ela existe fora do sistema, é aqui que a
+ * URL é colada. A observação guarda contexto que a contabilidade não registra.
+ *
+ * Editar isto não afeta a idempotência do import: `import_key` é gravado uma
+ * única vez, no commit, e nunca recalculado. A checagem de duplicata compara a
+ * chave calculada a partir do arquivo com a chave gravada na linha, então
+ * mexer em `urls` ou `notes` não faz o próximo import reinserir nada. E como o
+ * import só insere as linhas que o resolvedor marcou como novas, sem tocar nas
+ * existentes, o que se edita aqui sobrevive aos reimports.
+ *
+ * NUNCA escreva `import_key` aqui — é o que sustenta tudo isso.
+ */
+export async function updateEntryDetails(
+  id: string,
+  input: EntryDetailsValues,
+): Promise<ActionResult> {
+  const parsed = entryDetailsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+
+  const supabase = createAdminClient();
+  const { data: entry } = await supabase
+    .from('ledger_entries')
+    .select('project_id, urls')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!entry) return { ok: false, error: 'Lançamento não encontrado.' };
+
+  // Merge, não substituição: `urls` pode carregar `requisicao` e `recebimento`
+  // vindos do razão, que este formulário não edita e não pode apagar.
+  const urls = {
+    ...(entry.urls ?? {}),
+    nota_fiscal: parsed.data.notaFiscalUrl,
+    comprovante: parsed.data.comprovanteUrl,
+  };
+
+  const { error } = await supabase
+    .from('ledger_entries')
+    .update({ urls, notes: parsed.data.notes, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
   if (error) return { ok: false, error: error.message };
 
   revalidateEntry(entry.project_id);

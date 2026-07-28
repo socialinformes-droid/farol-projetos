@@ -127,6 +127,7 @@ export async function POST(request: Request) {
     document_date: entry.documentDate,
     urls: entry.urls,
     source: 'import',
+    notes: null,
     import_key: entry.importKey,
     import_batch_id: batchId,
     raw: entry.raw,

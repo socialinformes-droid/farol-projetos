@@ -15,6 +15,12 @@ import {
   ArrowDown,
   ArrowUpDown,
   ChevronDown,
+  PaperclipIcon,
+  FileTextIcon,
+  ReceiptIcon,
+  StickyNoteIcon,
+  LockIcon,
+  FileWarningIcon,
 } from 'lucide-react';
 
 import type { ProjectRow, BudgetLineRow, LedgerEntryRow, EntryKind } from '@/lib/supabase/types';
@@ -23,12 +29,16 @@ import {
   updateEntry,
   deleteEntry,
   reclassifyEntry,
+  updateEntryDetails,
   type EntryFormValues,
+  type EntryDetailsValues,
 } from '@/lib/actions/entries';
 import { EntryForm, type BudgetLineOption } from '@/components/forms/entry-form';
 import { formatBRL, formatDateBR } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -236,6 +246,7 @@ export function LancamentosView({
   const [origin, setOrigin] = useState<'all' | 'import' | 'manual'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [missingNotaOnly, setMissingNotaOnly] = useState(false);
   const [sort, setSort] = useState<SortState>({ key: 'entry_date', dir: 'desc' });
 
   const toggleSort = (key: SortKey) =>
@@ -271,6 +282,7 @@ export function LancamentosView({
       if (origin !== 'all' && e.source !== origin) return false;
       if (dateFrom && e.entry_date < dateFrom) return false;
       if (dateTo && e.entry_date > dateTo) return false;
+      if (missingNotaOnly && e.urls.nota_fiscal) return false;
       if (query) {
         const haystack = [e.description, e.vendor_name, e.voucher, e.document]
           .filter(Boolean)
@@ -280,7 +292,7 @@ export function LancamentosView({
       }
       return true;
     });
-  }, [entries, q, rubricaFilter, kindFilter, origin, dateFrom, dateTo]);
+  }, [entries, q, rubricaFilter, kindFilter, origin, dateFrom, dateTo, missingNotaOnly]);
 
   const summary = useMemo(() => {
     const sum = filtered.reduce((acc, e) => acc + Number(e.amount), 0);
@@ -356,21 +368,32 @@ export function LancamentosView({
         />
       </div>
 
-      <div className="w-full max-w-56">
-        <Select
-          items={originItems}
-          value={origin}
-          onValueChange={(v) => setOrigin((v ?? 'all') as typeof origin)}
+      <div className="flex items-center gap-2">
+        <div className="w-full max-w-56">
+          <Select
+            items={originItems}
+            value={origin}
+            onValueChange={(v) => setOrigin((v ?? 'all') as typeof origin)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as origens</SelectItem>
+              <SelectItem value="import">Importadas</SelectItem>
+              <SelectItem value="manual">Manuais</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          type="button"
+          variant={missingNotaOnly ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => setMissingNotaOnly((v) => !v)}
         >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Origem" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as origens</SelectItem>
-            <SelectItem value="import">Importadas</SelectItem>
-            <SelectItem value="manual">Manuais</SelectItem>
-          </SelectContent>
-        </Select>
+          <FileWarningIcon className="size-3.5" />
+          Sem nota fiscal
+        </Button>
       </div>
 
       <Card>
@@ -396,6 +419,7 @@ export function LancamentosView({
               <TableHead>Tipo</TableHead>
               <TableHead>Origem</TableHead>
               <SortHead label="Valor" sortKey="amount" sort={sort} onToggle={toggleSort} align="right" />
+              <TableHead>Anexos</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -435,6 +459,62 @@ export function LancamentosView({
   );
 }
 
+/**
+ * Coluna compacta com o estado dos anexos. A ausência de nota fiscal precisa
+ * ser visível de cara — é o que o usuário está caçando ao rolar a tabela —
+ * então o ícone continua presente e apenas apagado, em vez de sumir.
+ */
+function AttachmentsCell({ entry }: { entry: LedgerEntryRow }) {
+  const notaFiscalUrl = entry.urls.nota_fiscal;
+  const comprovanteUrl = entry.urls.comprovante;
+  const hasNotes = Boolean(entry.notes && entry.notes.trim() !== '');
+
+  return (
+    <div className="flex items-center gap-2.5">
+      {notaFiscalUrl ? (
+        <a
+          href={notaFiscalUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Nota fiscal"
+          className="text-foreground/70 transition-colors hover:text-foreground"
+        >
+          <FileTextIcon className="size-4" />
+          <span className="sr-only">Nota fiscal</span>
+        </a>
+      ) : (
+        <span title="Sem nota fiscal" className="text-muted-foreground/30">
+          <FileTextIcon className="size-4" />
+          <span className="sr-only">Sem nota fiscal</span>
+        </span>
+      )}
+      {comprovanteUrl ? (
+        <a
+          href={comprovanteUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Comprovante"
+          className="text-foreground/70 transition-colors hover:text-foreground"
+        >
+          <ReceiptIcon className="size-4" />
+          <span className="sr-only">Comprovante</span>
+        </a>
+      ) : (
+        <span title="Sem comprovante" className="text-muted-foreground/30">
+          <ReceiptIcon className="size-4" />
+          <span className="sr-only">Sem comprovante</span>
+        </span>
+      )}
+      {hasNotes && (
+        <span title={entry.notes ?? undefined} className="text-amber-600 dark:text-amber-400">
+          <StickyNoteIcon className="size-4" />
+          <span className="sr-only">Tem observação</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
 function EntryRow({
   entry,
   rubricaLabel,
@@ -448,6 +528,7 @@ function EntryRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [reclassifyOpen, setReclassifyOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isManual = entry.source === 'manual';
 
@@ -472,6 +553,9 @@ function EntryRow({
         </TableCell>
         <TableCell className="text-right font-mono">{formatBRL(entry.amount)}</TableCell>
         <TableCell>
+          <AttachmentsCell entry={entry} />
+        </TableCell>
+        <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
               <MoreVerticalIcon className="size-4" />
@@ -481,6 +565,10 @@ function EntryRow({
               <DropdownMenuItem onClick={() => setReclassifyOpen(true)}>
                 <TagIcon />
                 Reclassificar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAttachmentsOpen(true)}>
+                <PaperclipIcon />
+                Anexos e observações
               </DropdownMenuItem>
               <DropdownMenuItem disabled={!isManual} onClick={() => setEditOpen(true)}>
                 <PencilIcon />
@@ -545,6 +633,14 @@ function EntryRow({
         onChanged={onChanged}
       />
 
+      <AttachmentsDialog
+        entry={entry}
+        lineOptions={lineOptions}
+        open={attachmentsOpen}
+        onOpenChange={setAttachmentsOpen}
+        onChanged={onChanged}
+      />
+
       <DeleteEntryDialog
         entry={entry}
         open={deleteOpen}
@@ -556,6 +652,13 @@ function EntryRow({
 }
 
 const RECLASSIFY_NONE = '__sem_rubrica__';
+
+/** Mapa valor -> rótulo para o Select de rubrica usado nos diálogos de reclassificar/anexos. */
+function budgetLineSelectItems(lineOptions: BudgetLineOption[]): Record<string, string> {
+  const map: Record<string, string> = { [RECLASSIFY_NONE]: 'Sem rubrica' };
+  for (const o of lineOptions) map[o.id] = o.label;
+  return map;
+}
 
 function ReclassifyDialog({
   entry,
@@ -573,11 +676,7 @@ function ReclassifyDialog({
   const [value, setValue] = useState(entry.budget_line_id ?? RECLASSIFY_NONE);
   const [pending, setPending] = useState(false);
 
-  const items = useMemo(() => {
-    const map: Record<string, string> = { [RECLASSIFY_NONE]: 'Sem rubrica' };
-    for (const o of lineOptions) map[o.id] = o.label;
-    return map;
-  }, [lineOptions]);
+  const items = useMemo(() => budgetLineSelectItems(lineOptions), [lineOptions]);
 
   async function handleReclassify() {
     setPending(true);
@@ -620,6 +719,177 @@ function ReclassifyDialog({
           </Button>
           <Button onClick={handleReclassify} disabled={pending}>
             {pending ? 'Reclassificando…' : 'Reclassificar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Campo de contexto travado — espelha o razão contábil e não é editável aqui. */
+function LockedField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-2.5 py-1.5">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="max-w-[200px] truncate text-sm" title={value}>
+          {value}
+        </span>
+        <span
+          className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground/70"
+          title="Vem do razão contábil — não pode ser editado aqui."
+        >
+          <LockIcon className="size-3" />
+          do razão
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Diálogo único para anexos, observação e rubrica — disponível em qualquer
+ * lançamento, inclusive importado. Valor/data/conta/descrição de um
+ * importado só aparecem como contexto travado: editá-los faria a tela
+ * divergir do razão contábil (ver `updateEntry` em `entries-mutations.ts`).
+ * Anexos, observação e rubrica não têm essa restrição.
+ */
+function AttachmentsDialog({
+  entry,
+  lineOptions,
+  open,
+  onOpenChange,
+  onChanged,
+}: {
+  entry: LedgerEntryRow;
+  lineOptions: BudgetLineOption[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onChanged: () => void;
+}) {
+  const isImported = entry.source === 'import';
+
+  const [budgetLineId, setBudgetLineId] = useState(entry.budget_line_id ?? RECLASSIFY_NONE);
+  const [notaFiscalUrl, setNotaFiscalUrl] = useState(entry.urls.nota_fiscal ?? '');
+  const [comprovanteUrl, setComprovanteUrl] = useState(entry.urls.comprovante ?? '');
+  const [notes, setNotes] = useState(entry.notes ?? '');
+  const [pending, setPending] = useState(false);
+
+  const items = useMemo(() => budgetLineSelectItems(lineOptions), [lineOptions]);
+
+  async function handleSave() {
+    setPending(true);
+
+    const newBudgetLineId = budgetLineId === RECLASSIFY_NONE ? null : budgetLineId;
+    const budgetLineChanged = newBudgetLineId !== (entry.budget_line_id ?? null);
+
+    if (budgetLineChanged) {
+      const reclass = await reclassifyEntry(entry.id, newBudgetLineId);
+      if (!reclass.ok) {
+        setPending(false);
+        toast.error(reclass.error);
+        return;
+      }
+    }
+
+    const details: EntryDetailsValues = { notaFiscalUrl, comprovanteUrl, notes };
+    const result = await updateEntryDetails(entry.id, details);
+    setPending(false);
+
+    if (!result.ok) {
+      toast.error(result.error);
+      // A reclassificação, se houve, já foi salva — reflete na tabela mesmo
+      // com o restante pendente, em vez de esconder o que já funcionou.
+      if (budgetLineChanged) onChanged();
+      return;
+    }
+
+    toast.success('Lançamento atualizado.');
+    onOpenChange(false);
+    onChanged();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {isImported ? 'Editar lançamento (importado do razão)' : 'Editar anexos e observações'}
+          </DialogTitle>
+          <DialogDescription>
+            {isImported
+              ? 'Valor, data, conta e descrição espelham o razão contábil e não podem ser alterados aqui.'
+              : 'Anexe a nota fiscal, o comprovante e uma observação, se precisar.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {isImported && (
+          <div className="flex flex-col gap-1">
+            <LockedField label="Data" value={formatDateBR(entry.entry_date)} />
+            <LockedField label="Valor" value={formatBRL(entry.amount)} />
+            <LockedField label="Conta" value={entry.account_code ?? '—'} />
+            <LockedField label="Descrição" value={entry.description ?? '—'} />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`rubrica-${entry.id}`}>Rubrica</Label>
+          <Select
+            items={items}
+            value={budgetLineId}
+            onValueChange={(v) => setBudgetLineId(v ?? RECLASSIFY_NONE)}
+          >
+            <SelectTrigger id={`rubrica-${entry.id}`} className="w-full">
+              <SelectValue placeholder="Selecione uma rubrica" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={RECLASSIFY_NONE}>Sem rubrica</SelectItem>
+              {lineOptions.map((o) => (
+                <SelectItem key={o.id} value={o.id}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`nota-fiscal-${entry.id}`}>URL nota fiscal</Label>
+          <Input
+            id={`nota-fiscal-${entry.id}`}
+            type="url"
+            placeholder="https://…"
+            value={notaFiscalUrl}
+            onChange={(e) => setNotaFiscalUrl(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`comprovante-${entry.id}`}>URL comprovante</Label>
+          <Input
+            id={`comprovante-${entry.id}`}
+            type="url"
+            placeholder="https://…"
+            value={comprovanteUrl}
+            onChange={(e) => setComprovanteUrl(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`notes-${entry.id}`}>Observações</Label>
+          <Textarea
+            id={`notes-${entry.id}`}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={pending}>
+            {pending ? 'Salvando…' : 'Salvar'}
           </Button>
         </DialogFooter>
       </DialogContent>

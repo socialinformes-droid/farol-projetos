@@ -119,7 +119,13 @@ describe('buildEntriesSheet', () => {
     voucher: 'CONTAB000197595',
     journal: '2-02104071',
     urls: { nota_fiscal: null, comprovante: 'https://exemplo.invalid/c' },
+    notes: 'Aguardando nota fiscal do fornecedor',
   } as LedgerEntryRow;
+
+  it('termina o cabeçalho com a coluna Observações', () => {
+    const sheet = buildEntriesSheet([entry], new Map([['l1', 'Passagens Nacionais']]));
+    expect(sheet[0][sheet[0].length - 1]).toBe('Observações');
+  });
 
   it('resolve o nome da rubrica pelo mapa', () => {
     const sheet = buildEntriesSheet([entry], new Map([['l1', 'Passagens Nacionais']]));
@@ -133,5 +139,15 @@ describe('buildEntriesSheet', () => {
       new Map(),
     );
     expect(sheet[1][1]).toBe('Sem rubrica');
+  });
+
+  it('carrega a observação na última coluna', () => {
+    const sheet = buildEntriesSheet([entry], new Map([['l1', 'Passagens Nacionais']]));
+    expect(sheet[1][sheet[1].length - 1]).toBe('Aguardando nota fiscal do fornecedor');
+  });
+
+  it('deixa a coluna de observações vazia quando não há nota', () => {
+    const sheet = buildEntriesSheet([{ ...entry, notes: null }], new Map([['l1', 'Passagens Nacionais']]));
+    expect(sheet[1][sheet[1].length - 1]).toBe('');
   });
 });
