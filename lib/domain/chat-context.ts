@@ -47,10 +47,20 @@ export type ProjectChatContext = {
   physicalProgressPct: number;
   delayedActivities: ChatDelayedActivity[];
   recentEntries: ChatRecentEntry[];
+  /**
+   * Trecho do documento do projeto (objetivo/escopo, ver
+   * `lib/domain/project-context.ts`), quando o gestor anexou um — ajuda o
+   * chat a responder perguntas sobre o que o projeto se propõe a fazer.
+   * Truncado aqui de novo (mesmo já vindo cortado da extração/edição do
+   * gestor) para o payload do chat nunca crescer sem limite.
+   */
+  projectContext: string | null;
 };
 
 export const MAX_DELAYED_ACTIVITIES = 8;
 export const MAX_RECENT_ENTRIES = 8;
+/** Teto do trecho do documento do projeto dentro do contexto do chat — o chat já carrega financeiro e cronograma, então o documento entra resumido. */
+export const MAX_PROJECT_CONTEXT_CHARS = 2000;
 
 function toEpochDays(iso: string): number {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
@@ -97,6 +107,11 @@ export function buildProjectChatContext(args: {
     vendorName: e.vendor_name,
   }));
 
+  const rawContext = project.context_document?.trim();
+  const projectContext = rawContext
+    ? rawContext.slice(0, MAX_PROJECT_CONTEXT_CHARS)
+    : null;
+
   return {
     projectName: project.name,
     projectCode: project.code,
@@ -118,5 +133,6 @@ export function buildProjectChatContext(args: {
       physical.total > 0 ? Math.round((physical.concluded / physical.total) * 1000) / 10 : 0,
     delayedActivities,
     recentEntries: sampledEntries,
+    projectContext,
   };
 }

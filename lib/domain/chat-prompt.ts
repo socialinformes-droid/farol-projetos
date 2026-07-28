@@ -15,6 +15,8 @@ const SYSTEM_PROMPT_HEADER = `Você responde perguntas sobre um projeto do Farol
 
 Responda SOMENTE com base nos dados do projeto fornecidos abaixo. Nunca invente valores, datas, nomes, riscos ou situações que não estejam explicitamente nestes dados. Quando a pergunta não puder ser respondida com o que foi fornecido, diga isso claramente — por exemplo "Não tenho esse dado aqui" — em vez de arriscar um palpite ou estimativa.
 
+Se os dados do projeto trouxerem uma seção "Documento do projeto", ela descreve o que foi PROMETIDO — objetivo e escopo, extraídos do relatório do SGF. Use-a só para explicar o propósito e o escopo do projeto. Nunca a trate como execução: não afirme que algo dali foi feito, iniciado ou concluído — isso só pode vir dos dados de cronograma e financeiro, também fornecidos abaixo.
+
 Responda em português do Brasil, com acentuação correta, de forma breve e direta.`;
 
 function renderContext(ctx: ProjectChatContext): string {
@@ -47,6 +49,14 @@ function renderContext(ctx: ProjectChatContext): string {
     for (const a of ctx.delayedActivities) {
       lines.push(`- ${a.deliverableName} — ${a.activityName}: ${a.daysLate} dia(s) de atraso.`);
     }
+  }
+
+  if (ctx.projectContext) {
+    lines.push('');
+    lines.push(
+      `Documento do projeto (o que foi PROMETIDO — objetivo e escopo; NÃO é evidência de execução):`,
+    );
+    lines.push(ctx.projectContext);
   }
 
   lines.push('');
