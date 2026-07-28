@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { buildProjectMonitoringSnapshot } from '@/lib/domain/monitoring-queries';
+import { buildProjectMonitoringSnapshot, loadActivityFindings } from '@/lib/domain/monitoring-queries';
+import {
+  detectFindings,
+  resolvedFindings,
+  existingFindingFromRow,
+} from '@/lib/domain/monitoring-findings';
 import { buildMonitoringPromptMessages, parseAiFields } from '@/lib/domain/monitoring-prompt';
 import { generateText, AiGenerationError } from '@/lib/ai/deepseek';
 import { toISODate } from '@/lib/format';
@@ -58,8 +63,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: snapshotError.message }, { status: 500 });
   }
 
+  // Barreira de análise: apontamento crítico pendente bloqueia a geração —
+  // ver `lib/domain/monitoring-findings.ts`. Complementar não bloqueia; vira
+  // "[a confirmar]" no texto gerado, como já acontecia antes desta barreira.
+  const findingRows = await loadActivityFindings(monitoring.project_id);
+  const existingFindings = findingRows.map(existingFindingFromRow);
+  const pendingCritical = detectFindings(snapshot, existingFindings).filter(
+    (f) => f.severity === 'critico',
+  );
+
+  if (pendingCritical.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Há ${pendingCritical.length} apontamento(s) crítico(s) pendente(s) de resolução. Resolva-os na tela de Análise do período antes de gerar com IA.`,
+        snapshotSaved: true,
+      },
+      { status: 409 },
+    );
+  }
+
   try {
-    const messages = buildMonitoringPromptMessages(snapshot);
+    const resolved = resolvedFindings(snapshot, existingFindings);
+    const messages = buildMonitoringPromptMessages(snapshot, resolved);
     const raw = await generateText(messages);
     const fields = parseAiFields(raw);
 

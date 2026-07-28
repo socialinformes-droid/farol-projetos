@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildMonitoringPromptMessages, parseAiFields } from './monitoring-prompt';
 import type { MonitoringSnapshot, ConcludedActivity, DelayedActivity } from './monitoring-snapshot';
 import type { ProjectSummary } from './budget';
+import type { ResolvedFinding } from './monitoring-findings';
 
 function summary(over: Partial<ProjectSummary> = {}): ProjectSummary {
   return {
@@ -119,6 +120,52 @@ describe('buildMonitoringPromptMessages', () => {
     expect(user.content).toContain('12345.67');
     expect(user.content).toContain('999');
     expect(user.content).toContain('5000');
+  });
+
+  it('apontamento JUSTIFICADO entra como fato afirmável (a nota do gestor aparece no texto)', () => {
+    const justificado: ResolvedFinding = {
+      activityId: 'a1',
+      kind: 'sem_justificativa',
+      severity: 'critico',
+      description: 'Entrega A — Atividade X: em aberto, 10 dia(s) de atraso.',
+      deliverableName: 'Entrega A',
+      activityName: 'Atividade X',
+      plannedStart: null,
+      plannedEnd: '2026-07-01',
+      resolution: 'justificado',
+      note: 'Fornecedor atrasou a entrega do material didático',
+      resolvedBy: 'Gestor Fulano',
+      resolvedAt: '2026-07-20T00:00:00.000Z',
+    };
+    const [, user] = buildMonitoringPromptMessages(snapshot(), [justificado]);
+    expect(user.content).toContain('JUSTIFICADO');
+    expect(user.content).toContain('Fornecedor atrasou a entrega do material didático');
+    expect(user.content.toLowerCase()).toContain('fato');
+  });
+
+  it('apontamento REPLANEJADO é descrito explicitamente como NÃO sendo atraso', () => {
+    const replanejado: ResolvedFinding = {
+      activityId: 'a2',
+      kind: 'sem_justificativa',
+      severity: 'critico',
+      description: 'Entrega B — Curso de capacitação: em aberto, 53 dia(s) de atraso.',
+      deliverableName: 'Entrega B',
+      activityName: 'Curso de capacitação',
+      plannedStart: null,
+      plannedEnd: '2026-08-01',
+      resolution: 'replanejado',
+      note: 'Data alterada no SGF a pedido do fornecedor',
+      resolvedBy: 'Gestor Fulano',
+      resolvedAt: '2026-07-20T00:00:00.000Z',
+    };
+    const [system, user] = buildMonitoringPromptMessages(snapshot(), [replanejado]);
+    expect(user.content).toContain('REPLANEJADO');
+    expect(user.content.toLowerCase()).toContain('não é atraso');
+    expect(user.content).toContain('Curso de capacitação');
+    // A instrução também precisa estar no system prompt, não só no fato —
+    // senão a IA pode ignorar o rótulo e relatar como atraso mesmo assim.
+    expect(system.content.toLowerCase()).toContain('replanejado');
+    expect(system.content.toLowerCase()).toContain('não é atraso');
   });
 });
 

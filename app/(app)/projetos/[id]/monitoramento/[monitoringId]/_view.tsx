@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { CopyIcon, SparklesIcon, SendIcon, Trash2Icon } from 'lucide-react';
+import { CopyIcon, SparklesIcon, SendIcon, Trash2Icon, ListChecksIcon } from 'lucide-react';
 
 import type { ProjectRow, MonitoringRow } from '@/lib/supabase/types';
 import type { MonitoringSnapshot } from '@/lib/domain/monitoring-snapshot';
@@ -66,9 +67,11 @@ function periodLabel(m: MonitoringRow): string {
 export function MonitoramentoDetalheView({
   project,
   monitoring,
+  pendingCriticalCount,
 }: {
   project: ProjectRow;
   monitoring: MonitoringRow;
+  pendingCriticalCount: number;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState(monitoring);
@@ -179,6 +182,16 @@ export function MonitoramentoDetalheView({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/projetos/${project.id}/monitoramento/${current.id}/analise`} />}
+            >
+              <ListChecksIcon className="size-4" />
+              Análise do período
+              {pendingCriticalCount > 0 && <Badge variant="destructive">{pendingCriticalCount}</Badge>}
+            </Button>
             <Button type="button" variant="outline" onClick={handleGenerate} disabled={generating}>
               <SparklesIcon className="size-4" />
               {generating ? 'Gerando…' : 'Gerar com IA'}

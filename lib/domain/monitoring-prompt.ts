@@ -1,6 +1,7 @@
 import type { ChatMessage } from '@/lib/ai/deepseek';
 import type { MonitoringSnapshot } from './monitoring-snapshot';
 import type { MonitoringFields } from './monitoring-render';
+import type { ResolvedFinding } from './monitoring-findings';
 
 /**
  * Monta as mensagens enviadas à IA a partir do snapshot factual — puro, sem
@@ -27,14 +28,44 @@ O manual do PMO proíbe expressamente frases genéricas como "projeto em andamen
 
 Você não pode inventar. Risco, benefício e decisão de replanejamento exigem julgamento humano que você não tem: são o gestor e a Diretoria de Núcleo (DN) que avaliam isso, não você. Sempre que o registro factual fornecido não sustentar uma afirmação — um risco que não foi registrado, um benefício que não foi descrito, uma avaliação de cronograma que depende de contexto que você não recebeu — escreva um marcador entre colchetes no formato "[a confirmar: o que falta]" em vez de uma frase plausível. Um risco inventado que passa pela revisão do gestor e do DN vira compromisso formal com o PMO — é exatamente o erro que você precisa evitar.
 
+O registro factual pode trazer "Apontamentos resolvidos pelo gestor": use-os assim —
+- Um apontamento marcado JUSTIFICADO: a observação do gestor é um FATO apurado. Pode afirmá-la no texto, sem "[a confirmar]".
+- Um apontamento marcado REPLANEJADO: a data prevista mudou no SGF, então isto NÃO é atraso. Mesmo que o registro factual ainda mostre dias de diferença frente a uma data antiga, você não pode descrever isto como atraso — descreva-o como um replanejamento.
+- Um apontamento marcado "não reportado": não mencione no texto.
+
 Responda em português do Brasil, com acentuação correta, e devolva SOMENTE um objeto JSON válido, sem cercas de código markdown, com exatamente estas chaves de string: "desempenhoFisico", "resultados", "desempenhoFinanceiro", "riscos", "conclusao".`;
 
 function line(label: string, value: string): string {
   return `${label}: ${value}`;
 }
 
+/** Serializa uma lista de apontamentos resolvidos como fatos que a IA pode citar (justificado) ou que ela precisa tratar como não-atraso (replanejado). */
+function buildResolvedFindingsSection(findings: ResolvedFinding[]): string[] {
+  const parts: string[] = [];
+  parts.push('');
+  parts.push(`Apontamentos resolvidos pelo gestor na análise do período (${findings.length}):`);
+  if (findings.length === 0) {
+    parts.push('- Nenhum.');
+    return parts;
+  }
+  for (const f of findings) {
+    if (f.resolution === 'justificado') {
+      parts.push(
+        `- ${f.deliverableName} / ${f.activityName}: JUSTIFICADO pelo gestor — trate a observação a seguir como fato apurado, pode afirmá-la no texto: "${f.note ?? 'sem observação adicional'}".`,
+      );
+    } else if (f.resolution === 'replanejado') {
+      parts.push(
+        `- ${f.deliverableName} / ${f.activityName}: REPLANEJADO — a data prevista foi alterada no SGF. Isto NÃO é atraso; não descreva como atraso.${f.note ? ` Observação do gestor: "${f.note}".` : ''}`,
+      );
+    } else {
+      parts.push(`- ${f.deliverableName} / ${f.activityName}: não reportado (dispensado pelo gestor) — não mencione no texto.`);
+    }
+  }
+  return parts;
+}
+
 /** Serializa o snapshot em texto estruturado — o insumo bruto que a IA recebe, sem prosa pronta. */
-function buildFactSheet(s: MonitoringSnapshot): string {
+function buildFactSheet(s: MonitoringSnapshot, resolvedFindingsList: ResolvedFinding[]): string {
   const parts: string[] = [];
 
   parts.push(`Período do monitoramento: ${s.period.start} a ${s.period.end}.`);
@@ -110,15 +141,20 @@ function buildFactSheet(s: MonitoringSnapshot): string {
     );
   }
 
+  parts.push(...buildResolvedFindingsSection(resolvedFindingsList));
+
   return parts.join('\n');
 }
 
-export function buildMonitoringPromptMessages(snapshot: MonitoringSnapshot): ChatMessage[] {
+export function buildMonitoringPromptMessages(
+  snapshot: MonitoringSnapshot,
+  resolvedFindingsList: ResolvedFinding[] = [],
+): ChatMessage[] {
   return [
     { role: 'system', content: SYSTEM_PROMPT },
     {
       role: 'user',
-      content: `Registro factual do período (dados já apurados pelo Farol de Projetos — não recalcule nada, apenas escreva a prosa dos cinco campos a partir destes fatos):\n\n${buildFactSheet(snapshot)}`,
+      content: `Registro factual do período (dados já apurados pelo Farol de Projetos — não recalcule nada, apenas escreva a prosa dos cinco campos a partir destes fatos):\n\n${buildFactSheet(snapshot, resolvedFindingsList)}`,
     },
   ];
 }
