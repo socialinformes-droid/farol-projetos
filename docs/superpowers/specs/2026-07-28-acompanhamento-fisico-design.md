@@ -2,9 +2,14 @@
 
 **Data:** 2026-07-28
 **Status:** registro de intenção — não especificado ao ponto de implementar
-**Fonte dos dados:** `~/Downloads/_projeto_relatorioProjetoTemplate_28-07-2026_09-08-34.pdf` —
-relatório extraído do **SGF** com os dados do projeto nº 340252. É a **entrada** do módulo, de onde
-o escopo físico vem. O relatório de saída (o monitoramento) é outra coisa e ainda não foi definido.
+**Fonte dos dados:** dois relatórios extraídos do **SGF** para o projeto nº 340252.
+
+- `relatorioCronogramaFisicoFinanceiro 28-07-2026 09_05_58.xls` — **a fonte de importação**.
+  Apesar da extensão, é SpreadsheetML 2003 (XML), estruturado e legível pelo SheetJS.
+- `_projeto_relatorioProjetoTemplate_28-07-2026_09-08-34.pdf` — contexto do projeto (dados
+  cadastrais, equipe, histórico, monitoramento). Serve de referência, não de importação.
+
+O relatório de saída (o monitoramento) ainda não foi definido.
 
 ---
 
@@ -27,6 +32,37 @@ exporta o que foi realizado, alterado e comentado no intervalo, em formato adequ
 consolidar o texto do monitoramento.
 
 O produto final não é o texto gerado — é o registro contínuo que torna o texto possível.
+
+## 2b. Formato da fonte
+
+O `.xls` do SGF tem duas abas.
+
+**Aba `Entrega`** — 11 colunas, uma linha por atividade (30 no projeto de referência, em 10
+entregas de 3 atividades cada):
+
+| Coluna | Observação |
+|---|---|
+| Entrega | Só preenchida na **primeira linha de cada grupo** — célula mesclada |
+| Atividade | |
+| Tarefa | Terceiro nível, vazio em todo o arquivo |
+| Responsável | Nome do dono da atividade |
+| Data Início / Data Fim | Previstas |
+| % de Realização | `0,00` ou `100,00` nos dados reais |
+| Data Real do Início / da Finalização | Vazias enquanto não concluída |
+| Status | `Concluido` ou `Em andamento` |
+| Data da Atualização | Quando a linha foi tocada por último no SGF |
+
+**Aba `Aquisições`** — liga o financeiro ao físico: Financiador (DN/DR), Conta Nível 5 e 6, Valor
+Previsto, Valor Realizado, % de Realização, Status e **Entregas Vinculadas**. É por aqui que uma
+compra se conecta à entrega que ela serve.
+
+**Duas armadilhas do formato**, ambas verificadas contra o arquivo real:
+
+1. **Encoding.** O prólogo declara `ISO-8859-1`, mas o SheetJS assume UTF-8 — sem decodificar
+   antes, "Participação" chega como `Participa\ufffd\ufffdo`. Ler o arquivo como texto
+   ISO-8859-1 e passar a string ao parser resolve.
+2. **Células mescladas.** A coluna Entrega vem vazia em 20 das 30 linhas. Sem *forward fill*, dois
+   terços das atividades ficam sem entrega.
 
 ## 3. Estrutura, conforme o relatório do DN
 
@@ -94,17 +130,11 @@ natural do dado.
 
 Nenhuma destas está resolvida; todas mudam o desenho.
 
-**Formato de saída do SGF.** O escopo físico vem do SGF, e hoje o que se tem dele é este PDF. Ler
-PDF é frágil: o texto do cronograma físico sai com as colunas embaralhadas (o nome da atividade
-aparece *depois* das datas na extração), e qualquer mudança no layout do relatório quebra o
-parser em silêncio. Vale verificar antes de decidir: o SGF exporta o cronograma em `.xlsx` ou
-`.csv`? Tem API? Se só houver o PDF, a alternativa mais segura é o cadastro manual usando o
-relatório como referência — para este projeto são 10 entregas e ~30 atividades, digitáveis em uma
-sentada, e só uma vez por projeto.
-
-**Quem atualiza.** O app hoje não tem contas de usuário — tudo atrás de uma senha compartilhada. Um
-histórico de comentários sem autor identificado tem valor limitado num monitoramento que precisa
-dizer quem fez o quê. Isso pode forçar a revisão da decisão de não ter login.
+**Quem comenta.** O SGF já traz o responsável de cada atividade, então o *dono* é conhecido. O que
+continua sem identificação é o autor de cada comentário registrado no Farol, já que o app tem uma
+senha compartilhada e não sabe quem está digitando. Alternativa sem construir login: um seletor de
+autor alimentado pela lista de responsáveis que veio do próprio SGF — resolve a atribuição no
+monitoramento sem virar sistema de contas.
 
 **Formato da exportação para a IA.** Texto corrido, Markdown estruturado, JSON? E o monitoramento
 final é gerado dentro do Farol, ou o Farol só produz o insumo e a redação acontece fora?
@@ -114,9 +144,12 @@ Solicitação de Mudança*). Reimportar precisa preservar os comentários e as d
 registradas — mesmo problema de idempotência que o import do razão enfrentou, e que ali custou
 uma correção de chave.
 
-**Status intermediário.** O relatório mostra apenas `a Iniciar` e `Concluído` nas atividades. Não
-há "Em andamento". Para registro contínuo isso provavelmente é insuficiente — mas inventar status
-que o DN não reconhece pode atrapalhar na hora de reportar.
+**Status intermediário.** Resolvido pelo `.xls`: o SGF usa `Concluido` e `Em andamento`, e ainda
+traz `% de Realização` por atividade. Não é preciso inventar status nenhum.
+
+**O que fazer com `% de Realização`.** O SGF já registra o percentual, hoje sempre 0 ou 100 nos
+dados reais. Vale editar esse número no Farol, ou o par status + datas reais basta? Editar implica
+decidir o que acontece com ele na reimportação.
 
 ## 7. Fora de escopo nesta versão
 
