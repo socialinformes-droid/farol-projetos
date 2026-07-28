@@ -139,6 +139,44 @@ replanejar. O módulo alimenta o factual (o que mudou, quando, quanto) e deixa e
 precisa de quem conhece o projeto. Prometer geração completa desses campos produziria texto
 plausível e vazio — exatamente o que o manual proíbe.
 
+## 4d. O fluxo é de mão dupla
+
+O Farol não é só destino do escopo do SGF. Ele é onde o andamento é **registrado na hora**, e é
+dele que saem as datas reais que depois precisam ser lançadas de volta no SGF. Na prática o gestor
+não lembra, semanas depois, quando uma atividade começou ou terminou — e é essa lacuna que hoje
+atrasa o fechamento no SGF (o próprio relatório mede: *"dias sem Monitoramento DR: 28"*).
+
+```
+SGF  ──[importa escopo]──►  Farol  ──[registro diário]──►  Farol
+                              │
+                              ├──[datas reais a lançar]──►  SGF
+                              └──[monitoramento do período]──►  Forms PMO
+```
+
+Isso reordena as prioridades do módulo. A pergunta que a tela precisa responder melhor não é
+"como está o projeto", e sim **"o que eu preciso fechar no SGF?"**.
+
+### Consequência para a reimportação
+
+Reimportar deixa de ser só uma operação de atualização e vira **conciliação**. A cada import, o
+Farol compara o que veio do SGF com o que ele já sabe, e classifica cada atividade:
+
+| Situação | Significado |
+|---|---|
+| Farol tem data real, SGF não | **pendente de lançamento no SGF** — é a fila de trabalho |
+| SGF tem data que o Farol não tem | alguém lançou direto no SGF; o Farol absorve |
+| Ambos têm, valores diferentes | divergência a resolver, mostrar os dois lados |
+| Ambos iguais | conciliado, nada a fazer |
+| Atividade nova no SGF | escopo mudou; entra sem tocar no que já existe |
+| Atividade sumiu do SGF | escopo mudou; marcar, nunca apagar registro com histórico |
+
+**O que o Farol registrou nunca é sobrescrito silenciosamente pelo import.** Comentários e datas
+digitadas aqui são o trabalho que o módulo existe para preservar — a mesma lição que o import do
+razão custou caro para aprender.
+
+A tela principal do módulo físico decorre disso: uma lista de **pendências de sincronização**, não
+um cronograma bonito. O cronograma é contexto; a fila é o produto.
+
 ## 4c. Navegação
 
 O Farol mantém a instância geral com a lista de projetos. Dentro de um projeto, duas visões
