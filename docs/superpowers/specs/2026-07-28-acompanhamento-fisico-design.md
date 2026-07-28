@@ -174,8 +174,32 @@ Farol compara o que veio do SGF com o que ele já sabe, e classifica cada ativid
 digitadas aqui são o trabalho que o módulo existe para preservar — a mesma lição que o import do
 razão custou caro para aprender.
 
-A tela principal do módulo físico decorre disso: uma lista de **pendências de sincronização**, não
-um cronograma bonito. O cronograma é contexto; a fila é o produto.
+### O lançamento no SGF é manual
+
+Não há API. O gestor digita as datas no SGF, e o papel do Farol é **nunca deixá-lo sem saber o que
+falta lançar** — e entregar o dado pronto para copiar, para que digitar leve segundos.
+
+A tela principal do módulo físico decorre disso: uma lista de **pendências de lançamento**, não um
+cronograma bonito. O cronograma é contexto; a fila é o produto.
+
+```
+PENDÊNCIAS DE LANÇAMENTO NO SGF          4
+
+ Capacitação FRPRT
+   Participar da capacitação
+   início 19/05  fim 20/05   [copiar]
+
+ Conecta SST
+   Planejar participação
+   início 01/06  fim —       [copiar]
+
+ [ Copiar tudo ]  [ Exportar .xlsx ]
+```
+
+Cada item copia no formato que o SGF espera. Depois de lançar, o gestor marca como lançado — ou o
+próximo import confirma sozinho, ao ver que o SGF já tem a data, e a pendência se resolve sem
+ninguém precisar dizer nada. A segunda via é melhor: não depende de disciplina extra e usa o
+import que já vai acontecer de qualquer jeito.
 
 ## 4c. Navegação
 
