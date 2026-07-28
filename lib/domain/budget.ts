@@ -44,6 +44,15 @@ export type ProjectSummary = {
   totalBudget: number;
   realized: number;
   available: number;
+  /**
+   * Quanto do orçamento total já foi executado, em percentual. Diferente de
+   * `capUsagePct`, que mede o consumo do teto de remanejamento: um projeto
+   * pode estar com 90% do orçamento gasto e 0% do teto consumido, se nenhuma
+   * rubrica estourou o próprio valor.
+   *
+   * Zero quando o orçamento total é zero, para não dividir por zero.
+   */
+  executionPct: number;
   transferred: number;
   transferCap: number;
   capUsagePct: number;
@@ -156,6 +165,8 @@ export function summarizeProject(
     totalBudget: project.totalBudget,
     realized,
     available: round2(project.totalBudget - realized),
+    executionPct:
+      project.totalBudget > 0 ? round2((realized / project.totalBudget) * 100) : 0,
     transferred,
     transferCap,
     capUsagePct,

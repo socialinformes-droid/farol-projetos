@@ -55,6 +55,7 @@ export function buildIndicatorsSheet(project: ProjectRow, summary: ProjectSummar
     ['Orçamento total', summary.totalBudget],
     ['Realizado', summary.realized],
     ['Saldo disponível', summary.available],
+    ['Execução do orçamento (%)', summary.executionPct],
     ['Remanejado entre rubricas', summary.transferred],
     ['Teto de remanejamento', summary.transferCap],
     ['Consumo do teto (%)', summary.capUsagePct],

@@ -132,4 +132,36 @@ describe('summarizeProject', () => {
     const s = summarizeProject(project, lines, []);
     expect(s.lines.map((l) => l.id)).toEqual(['a', 'z']);
   });
+
+  it('calcula o percentual de execução do orçamento total', () => {
+    const s = summarizeProject(project, [line('a', 100)], [entry('a', 32)]);
+    expect(s.executionPct).toBe(32);
+  });
+
+  it('execução e consumo do teto são independentes', () => {
+    // 90% do orçamento gasto sem nenhuma rubrica estourar: teto intacto.
+    const lines = [line('a', 50), line('b', 50)];
+    const s = summarizeProject(project, lines, [entry('a', 45), entry('b', 45)]);
+    expect(s.executionPct).toBe(90);
+    expect(s.capUsagePct).toBe(0);
+    expect(s.status).toBe('ok');
+  });
+
+  it('execução passa de 100% quando o realizado estoura o total', () => {
+    const s = summarizeProject(project, [line('a', 100)], [entry('a', 120)]);
+    expect(s.executionPct).toBe(120);
+    expect(s.overBudget).toBe(true);
+  });
+
+  it('execução é zero quando o orçamento total é zero', () => {
+    const semOrcamento: ProjectInput = { ...project, totalBudget: 0 };
+    const s = summarizeProject(semOrcamento, [line('a', 0)], []);
+    expect(s.executionPct).toBe(0);
+  });
+
+  it('lançamento sem rubrica conta na execução do total', () => {
+    const s = summarizeProject(project, [line('a', 50)], [entry('a', 20), entry(null, 10)]);
+    expect(s.realized).toBe(30);
+    expect(s.executionPct).toBe(30);
+  });
 });

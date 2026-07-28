@@ -30,6 +30,7 @@ const summary: ProjectSummary = {
   totalBudget: 100000,
   realized: 48419.11,
   available: 51580.89,
+  executionPct: 48.42,
   transferred: 2000,
   transferCap: 25000,
   capUsagePct: 8,
@@ -97,6 +98,7 @@ describe('buildIndicatorsSheet', () => {
     expect(sheet).toContainEqual(['Orçamento total', 100000]);
     expect(sheet).toContainEqual(['Realizado', 48419.11]);
     expect(sheet).toContainEqual(['Saldo disponível', 51580.89]);
+    expect(sheet).toContainEqual(['Execução do orçamento (%)', 48.42]);
     expect(sheet).toContainEqual(['Remanejado entre rubricas', 2000]);
     expect(sheet).toContainEqual(['Teto de remanejamento', 25000]);
     expect(sheet).toContainEqual(['Consumo do teto (%)', 8]);

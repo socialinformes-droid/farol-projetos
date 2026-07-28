@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ProjectAlerts } from '@/components/project/project-alerts';
 import { TransferCapMeter } from '@/components/project/transfer-cap-meter';
+import { BudgetExecutionMeter } from '@/components/project/budget-execution-meter';
 import { BudgetVsActualChart } from '@/components/charts/budget-vs-actual-chart';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -123,31 +124,56 @@ export function ProjectDashboardView({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Orçamento total" value={formatBRL(summary.totalBudget)} />
-        <KpiCard label="Realizado" value={formatBRL(summary.realized)} />
+        <KpiCard
+          label="Realizado"
+          value={formatBRL(summary.realized)}
+          hint={`${Math.round(summary.executionPct)}% do orçamento`}
+        />
         <KpiCard
           label="Saldo disponível"
           value={formatBRL(summary.available)}
           valueClassName={summary.available < 0 ? 'text-destructive' : undefined}
+          hint={
+            summary.available < 0
+              ? 'orçamento excedido'
+              : `${Math.round(100 - summary.executionPct)}% ainda disponível`
+          }
         />
         <KpiCard
           label="Consumo do teto"
           value={`${Math.round(summary.capUsagePct)}%`}
           valueClassName={CAP_STATUS_TEXT[summary.status]}
+          hint="do remanejamento permitido"
         />
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <p className="eyebrow">Teto de remanejamento</p>
-          <TransferCapMeter
-            transferred={summary.transferred}
-            transferCap={summary.transferCap}
-            capUsagePct={summary.capUsagePct}
-            warningThresholdPct={Number(project.warning_threshold_pct)}
-            status={summary.status}
-          />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <p className="eyebrow">Execução do orçamento</p>
+            <BudgetExecutionMeter
+              realized={summary.realized}
+              totalBudget={summary.totalBudget}
+              available={summary.available}
+              executionPct={summary.executionPct}
+              overBudget={summary.overBudget}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <p className="eyebrow">Teto de remanejamento</p>
+            <TransferCapMeter
+              transferred={summary.transferred}
+              transferCap={summary.transferCap}
+              capUsagePct={summary.capUsagePct}
+              warningThresholdPct={Number(project.warning_threshold_pct)}
+              status={summary.status}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {summary.lines.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
@@ -203,16 +229,20 @@ function KpiCard({
   label,
   value,
   valueClassName,
+  hint,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
+  /** Linha de apoio abaixo do número — o mesmo dado em outra unidade. */
+  hint?: string;
 }) {
   return (
     <Card size="sm">
       <CardContent className="flex flex-col gap-1">
         <p className="eyebrow">{label}</p>
         <p className={cn('font-display text-2xl', valueClassName)}>{value}</p>
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
   );
