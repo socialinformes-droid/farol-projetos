@@ -3,6 +3,7 @@ export type EntryKind = 'despesa' | 'aporte' | 'manual' | 'ignorado';
 export type FundingModel = 'adiantamento' | 'reembolso' | 'interno';
 export type BudgetControl = 'por_rubrica' | 'global';
 export type EntrySource = 'import' | 'manual';
+export type ProjectEntity = 'SESI' | 'SENAI';
 
 export type EntryUrls = {
   requisicao?: string | null;
@@ -24,6 +25,13 @@ export type ProjectRow = {
   funding_model: FundingModel;
   budget_control: BudgetControl;
   notes: string | null;
+  /**
+   * Identificação para o monitoramento do PMO DR/AL (migração 0007) — todas
+   * opcionais, pois projetos já cadastrados não as têm.
+   */
+  sgf_number: string | null;
+  entity: ProjectEntity | null;
+  manager_name: string | null;
   created_at: string;
   updated_at: string;
 };

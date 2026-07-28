@@ -68,6 +68,21 @@ const STATUS_OPTIONS: { value: ProjectFormValues['status']; label: string }[] = 
   { value: 'encerrado', label: 'Encerrado' },
 ];
 
+// Sentinela usada no Select de entidade: assim como o Select de grupo em
+// rubricas, o Base UI Select trabalha com valores string não-vazios, então
+// "não informado" precisa de um valor próprio convertido para `null` na
+// leitura/escrita do form.
+const ENTITY_NONE = '__none__';
+const ENTITY_OPTIONS: { value: 'SESI' | 'SENAI'; label: string }[] = [
+  { value: 'SESI', label: 'SESI' },
+  { value: 'SENAI', label: 'SENAI' },
+];
+const ENTITY_ITEMS: Record<string, string> = {
+  [ENTITY_NONE]: 'Não informado',
+  SESI: 'SESI',
+  SENAI: 'SENAI',
+};
+
 export function ProjectForm({
   defaultValues,
   defaults,
@@ -96,6 +111,9 @@ export function ProjectForm({
       warningThresholdPct:
         defaultValues?.warningThresholdPct ?? defaults?.warningThresholdPct ?? 80,
       notes: defaultValues?.notes ?? null,
+      sgfNumber: defaultValues?.sgfNumber ?? null,
+      entity: defaultValues?.entity ?? null,
+      managerName: defaultValues?.managerName ?? null,
     },
   });
 
@@ -127,6 +145,73 @@ export function ProjectForm({
         <Label htmlFor="name">Nome do projeto</Label>
         <Input id="name" {...register('name')} />
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="sgfNumber">Nº do projeto no SGF</Label>
+        <Controller
+          control={control}
+          name="sgfNumber"
+          render={({ field }) => (
+            <Input
+              id="sgfNumber"
+              placeholder="ex: 340252"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(e.target.value || null)}
+            />
+          )}
+        />
+        <p className="text-xs text-muted-foreground">
+          Identifica o projeto no SGF e no cronograma físico. Ex.: 340252
+        </p>
+        {errors.sgfNumber && (
+          <p className="text-xs text-destructive">{errors.sgfNumber.message}</p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="entity">Entidade</Label>
+        <Controller
+          control={control}
+          name="entity"
+          render={({ field }) => (
+            <Select
+              items={ENTITY_ITEMS}
+              value={field.value ?? ENTITY_NONE}
+              onValueChange={(v) => field.onChange(v === ENTITY_NONE ? null : v)}
+            >
+              <SelectTrigger id="entity" className="w-full">
+                <SelectValue placeholder="Selecione a entidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ENTITY_NONE}>Não informado</SelectItem>
+                {ENTITY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="managerName">Gestor do projeto</Label>
+        <Controller
+          control={control}
+          name="managerName"
+          render={({ field }) => (
+            <Input
+              id="managerName"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(e.target.value || null)}
+            />
+          )}
+        />
+        {errors.managerName && (
+          <p className="text-xs text-destructive">{errors.managerName.message}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">

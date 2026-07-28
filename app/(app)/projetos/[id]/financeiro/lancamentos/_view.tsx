@@ -74,6 +74,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { BackLink } from '@/components/layout/back-link';
+import { DimensionTabs } from '@/components/layout/dimension-tabs';
 
 // Sentinela usado no filtro de rubrica: "Sem rubrica" precisa de um valor
 // próprio na query string / estado, já que `budget_line_id` nulo não tem
@@ -327,7 +328,8 @@ export function LancamentosView({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <BackLink href={`/projetos/${project.id}`} label={project.name} />
+        <BackLink href={`/projetos/${project.id}/financeiro`} label="Financeiro" />
+        <DimensionTabs projectId={project.id} active="financeiro" />
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl">Lançamentos</h1>

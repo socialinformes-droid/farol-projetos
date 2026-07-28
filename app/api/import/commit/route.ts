@@ -177,9 +177,10 @@ export async function POST(request: Request) {
 
   revalidatePath('/');
   revalidatePath(`/projetos/${plan.projectId}`);
-  revalidatePath(`/projetos/${plan.projectId}/lancamentos`);
-  revalidatePath(`/projetos/${plan.projectId}/rubricas`);
-  revalidatePath(`/projetos/${plan.projectId}/importar`);
+  revalidatePath(`/projetos/${plan.projectId}/financeiro`);
+  revalidatePath(`/projetos/${plan.projectId}/financeiro/lancamentos`);
+  revalidatePath(`/projetos/${plan.projectId}/financeiro/rubricas`);
+  revalidatePath(`/projetos/${plan.projectId}/financeiro/importar`);
 
   return NextResponse.json({
     inserted,

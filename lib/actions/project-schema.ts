@@ -30,6 +30,13 @@ export const projectFormSchema = z.object({
    * rubricas como mera classificação, com o total do projeto como único limite.
    */
   budgetControl: z.enum(['por_rubrica', 'global']),
+  /**
+   * Identificação para o monitoramento do PMO DR/AL (migração 0007). Todas
+   * opcionais — projetos já cadastrados seguem válidos sem elas.
+   */
+  sgfNumber: z.string().trim().nullable(),
+  entity: z.enum(['SESI', 'SENAI']).nullable(),
+  managerName: z.string().trim().nullable(),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

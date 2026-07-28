@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import { loadProjectSummary } from '@/lib/domain/project-queries';
-import { ProjectOverviewView } from './_view';
+import { FinanceiroView } from './_view';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProjectOverviewPage({
+export default async function FinanceiroPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -12,5 +12,5 @@ export default async function ProjectOverviewPage({
   const { id } = await params;
   const result = await loadProjectSummary(id);
   if (!result) notFound();
-  return <ProjectOverviewView project={result.project} summary={result.summary} />;
+  return <FinanceiroView project={result.project} summary={result.summary} />;
 }

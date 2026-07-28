@@ -35,7 +35,8 @@ export async function createBudgetLine(
   }
 
   revalidatePath(`/projetos/${projectId}`);
-  revalidatePath(`/projetos/${projectId}/rubricas`);
+  revalidatePath(`/projetos/${projectId}/financeiro`);
+  revalidatePath(`/projetos/${projectId}/financeiro/rubricas`);
   return { ok: true, data: { id: data.id } };
 }
 
@@ -65,7 +66,8 @@ export async function updateBudgetLine(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/projetos/${data.project_id}`);
-  revalidatePath(`/projetos/${data.project_id}/rubricas`);
+  revalidatePath(`/projetos/${data.project_id}/financeiro`);
+  revalidatePath(`/projetos/${data.project_id}/financeiro/rubricas`);
   return { ok: true, data: undefined };
 }
 
@@ -115,7 +117,8 @@ export async function moveBudgetLine(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/projetos/${line.project_id}`);
-  revalidatePath(`/projetos/${line.project_id}/rubricas`);
+  revalidatePath(`/projetos/${line.project_id}/financeiro`);
+  revalidatePath(`/projetos/${line.project_id}/financeiro/rubricas`);
   return { ok: true, data: undefined };
 }
 
@@ -145,6 +148,7 @@ export async function deleteBudgetLine(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/projetos/${line.project_id}`);
-  revalidatePath(`/projetos/${line.project_id}/rubricas`);
+  revalidatePath(`/projetos/${line.project_id}/financeiro`);
+  revalidatePath(`/projetos/${line.project_id}/financeiro/rubricas`);
   return { ok: true, data: undefined };
 }

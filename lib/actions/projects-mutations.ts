@@ -17,6 +17,9 @@ function toRow(input: ProjectFormValues) {
     notes: input.notes,
     funding_model: input.fundingModel,
     budget_control: input.budgetControl,
+    sgf_number: input.sgfNumber,
+    entity: input.entity,
+    manager_name: input.managerName,
   };
 }
 
@@ -65,6 +68,7 @@ export async function updateProject(
 
   revalidatePath('/');
   revalidatePath(`/projetos/${id}`);
+  revalidatePath(`/projetos/${id}/financeiro`);
   return { ok: true, data: undefined };
 }
 

@@ -73,7 +73,10 @@ export function ProjectAlerts({
         <>
           {n} rubrica{n === 1 ? '' : 's'} com gasto e sem orçamento definido. O cálculo do teto
           está incompleto.{' '}
-          <Link href={`/projetos/${projectId}/rubricas`} className="underline underline-offset-2">
+          <Link
+            href={`/projetos/${projectId}/financeiro/rubricas`}
+            className="underline underline-offset-2"
+          >
             Ver rubricas
           </Link>
         </>
@@ -89,7 +92,7 @@ export function ProjectAlerts({
         <>
           {formatBRL(summary.unclassifiedTotal)} em lançamentos sem rubrica.{' '}
           <Link
-            href={`/projetos/${projectId}/lancamentos?rubrica=sem`}
+            href={`/projetos/${projectId}/financeiro/lancamentos?rubrica=sem`}
             className="underline underline-offset-2"
           >
             Ver lançamentos

@@ -1,29 +1,20 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, FileSpreadsheetIcon, FileTextIcon } from 'lucide-react';
+import {
+  ArrowRightIcon,
+  DownloadIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+} from 'lucide-react';
 
 import type { ProjectRow } from '@/lib/supabase/types';
-import type {
-  ProjectSummary,
-  LineResult,
-  AlertStatus,
-  BudgetControl,
-} from '@/lib/domain/budget';
+import type { ProjectSummary } from '@/lib/domain/budget';
 import { formatBRL } from '@/lib/format';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -31,11 +22,6 @@ import {
   DropdownMenuLinkItem,
 } from '@/components/ui/dropdown-menu';
 import { BackLink } from '@/components/layout/back-link';
-import { ProjectAlerts } from '@/components/project/project-alerts';
-import { TransferCapMeter } from '@/components/project/transfer-cap-meter';
-import { BudgetExecutionMeter } from '@/components/project/budget-execution-meter';
-import { CashPosition } from '@/components/project/cash-position';
-import { BudgetVsActualChart } from '@/components/charts/budget-vs-actual-chart';
 
 const STATUS_LABEL: Record<string, string> = {
   planejamento: 'Planejamento',
@@ -43,30 +29,18 @@ const STATUS_LABEL: Record<string, string> = {
   encerrado: 'Encerrado',
 };
 
-const CAP_STATUS_TEXT: Record<AlertStatus, string> = {
-  ok: 'text-money-up',
-  aviso: 'text-amber-700 dark:text-amber-400',
-  violacao: 'text-destructive',
-};
-
-export function ProjectDashboardView({
+/**
+ * Tela de entrada do projeto — compacta de propósito. Não repete o que já
+ * mora no dashboard financeiro (KPIs, tabela de rubricas, gráfico); mostra
+ * só o suficiente de cada dimensão para o usuário escolher para onde ir.
+ */
+export function ProjectOverviewView({
   project,
   summary,
 }: {
   project: ProjectRow;
   summary: ProjectSummary;
 }) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-
-  function toggleCollapse(id: string) {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -77,26 +51,12 @@ export function ProjectDashboardView({
               <h1 className="font-display text-2xl">{project.name}</h1>
               <Badge variant="outline">{STATUS_LABEL[project.status]}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground">{project.code}</p>
+            <p className="text-sm text-muted-foreground">
+              {project.code}
+              {project.sgf_number ? ` · SGF ${project.sgf_number}` : ''}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" nativeButton={false} render={<Link href={`/projetos/${project.id}/rubricas`} />}>
-              Rubricas
-            </Button>
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/projetos/${project.id}/lancamentos`} />}
-            >
-              Lançamentos
-            </Button>
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/projetos/${project.id}/importar`} />}
-            >
-              Importar
-            </Button>
             <Button
               variant="outline"
               nativeButton={false}
@@ -130,291 +90,74 @@ export function ProjectDashboardView({
         </div>
       </div>
 
-      <ProjectAlerts projectId={project.id} summary={summary} />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Orçamento total" value={formatBRL(summary.totalBudget)} />
-        <KpiCard
-          label="Realizado"
-          value={formatBRL(summary.realized)}
-          hint={`${Math.round(summary.executionPct)}% do orçamento`}
-        />
-        <KpiCard
-          label="Saldo disponível"
-          value={formatBRL(summary.available)}
-          valueClassName={summary.available < 0 ? 'text-destructive' : undefined}
-          hint={
-            summary.available < 0
-              ? 'orçamento excedido'
-              : `${Math.round(100 - summary.executionPct)}% ainda disponível`
-          }
-        />
-        {summary.budgetControl === 'global' ? (
-          <KpiCard
-            label="Execução"
-            value={`${Math.round(summary.executionPct)}%`}
-            valueClassName={CAP_STATUS_TEXT[summary.status]}
-            hint="do orçamento do projeto"
-          />
-        ) : (
-          <KpiCard
-            label="Consumo do teto"
-            value={`${Math.round(summary.capUsagePct)}%`}
-            valueClassName={CAP_STATUS_TEXT[summary.status]}
-            hint="do remanejamento permitido"
-          />
-        )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FinanceiroCard projectId={project.id} summary={summary} />
+        <FisicoCard projectId={project.id} />
       </div>
-
-      <div
-        className={cn(
-          'grid grid-cols-1 gap-4',
-          summary.budgetControl === 'por_rubrica' && 'lg:grid-cols-2',
-        )}
-      >
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            <p className="eyebrow">Execução do orçamento</p>
-            <BudgetExecutionMeter
-              realized={summary.realized}
-              totalBudget={summary.totalBudget}
-              available={summary.available}
-              executionPct={summary.executionPct}
-              overBudget={summary.overBudget}
-            />
-          </CardContent>
-        </Card>
-
-        {summary.budgetControl === 'por_rubrica' && (
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            <p className="eyebrow">Teto de remanejamento</p>
-            <TransferCapMeter
-              transferred={summary.transferred}
-              transferCap={summary.transferCap}
-              capUsagePct={summary.capUsagePct}
-              warningThresholdPct={Number(project.warning_threshold_pct)}
-              status={summary.status}
-            />
-          </CardContent>
-        </Card>
-        )}
-      </div>
-
-      {summary.cashBalance !== null && (
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            <p className="eyebrow">
-              {summary.fundingModel === 'adiantamento'
-                ? 'Caixa do projeto (recurso adiantado)'
-                : 'Caixa do projeto (reembolso mediante prestação de contas)'}
-            </p>
-            <CashPosition
-              fundingModel={summary.fundingModel}
-              contributions={summary.contributions}
-              realized={summary.realized}
-              cashBalance={summary.cashBalance}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {summary.lines.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
-          <p className="text-sm text-muted-foreground">Nenhuma rubrica cadastrada ainda.</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Rubrica</TableHead>
-              {/* Sem limite por rubrica, as colunas de orçado, saldo e excesso
-                  não têm o que mostrar — a tabela vira leitura de consumo. */}
-              {summary.budgetControl === 'por_rubrica' && <TableHead>Orçado</TableHead>}
-              <TableHead>Realizado</TableHead>
-              {summary.budgetControl === 'por_rubrica' ? (
-                <>
-                  <TableHead>Saldo</TableHead>
-                  <TableHead>Excesso</TableHead>
-                  <TableHead>% Execução</TableHead>
-                </>
-              ) : (
-                <TableHead>% do gasto</TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {summary.lines.map((line) => (
-              <RubricaRow
-                key={line.id}
-                line={line}
-                depth={0}
-                collapsedIds={collapsedIds}
-                onToggleCollapse={toggleCollapse}
-                budgetControl={summary.budgetControl}
-                totalRealized={summary.realized}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <p className="eyebrow">Orçado × Realizado por rubrica</p>
-          <BudgetVsActualChart lines={summary.lines} />
-        </CardContent>
-      </Card>
-
-      {summary.contributions !== 0 && (
-        <Card>
-          <CardContent className="py-3 text-sm text-muted-foreground">
-            Aportes recebidos: {formatBRL(summary.contributions)} — não entram no realizado nem no
-            cálculo do teto.
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  valueClassName,
-  hint,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-  /** Linha de apoio abaixo do número — o mesmo dado em outra unidade. */
-  hint?: string;
-}) {
+function DimensionCardLink({ href }: { href: string }) {
   return (
-    <Card size="sm">
-      <CardContent className="flex flex-col gap-1">
-        <p className="eyebrow">{label}</p>
-        <p className={cn('font-display text-2xl', valueClassName)}>{value}</p>
-        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1 self-end text-sm font-medium text-primary hover:underline"
+    >
+      Abrir
+      <ArrowRightIcon className="size-3.5" />
+    </Link>
+  );
+}
+
+function FinanceiroCard({
+  projectId,
+  summary,
+}: {
+  projectId: string;
+  summary: ProjectSummary;
+}) {
+  const pct = summary.totalBudget > 0 ? (summary.realized / summary.totalBudget) * 100 : 0;
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <p className="eyebrow">Financeiro</p>
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="font-medium">{formatBRL(summary.realized)}</span>
+          <span className="text-muted-foreground">de {formatBRL(summary.totalBudget)}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Progress value={Math.min(100, pct)} className="flex-1" />
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {Math.round(pct)}%
+          </span>
+        </div>
+        {summary.contributions !== 0 && (
+          <p className="text-xs text-muted-foreground">
+            Aportes {formatBRL(summary.contributions)}
+          </p>
+        )}
+        <DimensionCardLink href={`/projetos/${projectId}/financeiro`} />
       </CardContent>
     </Card>
   );
 }
 
-function RubricaRow({
-  line,
-  depth,
-  collapsedIds,
-  onToggleCollapse,
-  budgetControl,
-  totalRealized,
-}: {
-  line: LineResult;
-  depth: number;
-  collapsedIds: Set<string>;
-  onToggleCollapse: (id: string) => void;
-  budgetControl: BudgetControl;
-  /** Base do "% do gasto" no controle global. */
-  totalRealized: number;
-}) {
-  const porRubrica = budgetControl === 'por_rubrica';
-  const hasChildren = line.children.length > 0;
-  const isCollapsed = collapsedIds.has(line.id);
-
-  // Por rubrica, o percentual é execução contra o próprio orçado. No global
-  // não há orçado, então o número que informa é a fatia da rubrica no gasto
-  // total do projeto.
-  const sharePct = porRubrica
-    ? line.executionPct
-    : totalRealized > 0
-      ? (line.realized / totalRealized) * 100
-      : null;
-
+/**
+ * O módulo físico ainda não existe — nada aqui vem do banco. É um estado
+ * vazio explícito, não um placeholder com números inventados.
+ */
+function FisicoCard({ projectId }: { projectId: string }) {
   return (
-    <>
-      <TableRow>
-        <TableCell className="font-mono text-xs text-muted-foreground">
-          {line.code ?? '—'}
-        </TableCell>
-        <TableCell>
-          <div className="flex items-center gap-1" style={{ paddingLeft: depth * 20 }}>
-            {hasChildren ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => onToggleCollapse(line.id)}
-              >
-                {isCollapsed ? (
-                  <ChevronRightIcon className="size-3.5" />
-                ) : (
-                  <ChevronDownIcon className="size-3.5" />
-                )}
-              </Button>
-            ) : (
-              <span className="inline-block size-6" />
-            )}
-            <span>{line.name}</span>
-            {porRubrica && !line.isControl && (
-              <Badge
-                variant="outline"
-                className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400"
-              >
-                sem orçamento
-              </Badge>
-            )}
-          </div>
-        </TableCell>
-        {porRubrica && (
-          <TableCell>{line.budgeted === null ? '—' : formatBRL(line.budgeted)}</TableCell>
-        )}
-        <TableCell>{formatBRL(line.realized)}</TableCell>
-        {porRubrica && (
-          <TableCell
-            className={line.balance !== null && line.balance < 0 ? 'text-destructive' : undefined}
-          >
-            {line.balance === null ? '—' : formatBRL(line.balance)}
-          </TableCell>
-        )}
-        {porRubrica && (
-          <TableCell className={line.excess > 0 ? 'text-destructive' : undefined}>
-            {line.excess > 0 ? formatBRL(line.excess) : '—'}
-          </TableCell>
-        )}
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <span className="text-xs tabular-nums">
-              {sharePct === null ? '—' : `${Math.round(sharePct)}%`}
-            </span>
-            {sharePct !== null && (
-              <div className="h-1 w-14 overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn(
-                    'h-full rounded-full',
-                    porRubrica && sharePct > 100 ? 'bg-destructive' : 'bg-primary',
-                  )}
-                  style={{ width: `${Math.min(100, sharePct)}%` }}
-                />
-              </div>
-            )}
-          </div>
-        </TableCell>
-      </TableRow>
-
-      {hasChildren &&
-        !isCollapsed &&
-        line.children.map((child) => (
-          <RubricaRow
-            key={child.id}
-            line={child}
-            depth={depth + 1}
-            collapsedIds={collapsedIds}
-            onToggleCollapse={onToggleCollapse}
-            budgetControl={budgetControl}
-            totalRealized={totalRealized}
-          />
-        ))}
-    </>
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <p className="eyebrow">Físico</p>
+        <p className="text-sm text-muted-foreground">
+          Cronograma físico ainda não importado.
+        </p>
+        <DimensionCardLink href={`/projetos/${projectId}/fisico`} />
+      </CardContent>
+    </Card>
   );
 }

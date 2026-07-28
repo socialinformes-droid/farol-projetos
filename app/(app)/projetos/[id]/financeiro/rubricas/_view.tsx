@@ -62,6 +62,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { BackLink } from '@/components/layout/back-link';
+import { DimensionTabs } from '@/components/layout/dimension-tabs';
 
 // Sentinela usada no Select de grupo: Base UI Select trabalha com valores
 // string não-vazios, então "(nenhum)" precisa de um valor próprio que é
@@ -133,7 +134,8 @@ export function BudgetLinesView({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <BackLink href={`/projetos/${project.id}`} label={project.name} />
+        <BackLink href={`/projetos/${project.id}/financeiro`} label="Financeiro" />
+        <DimensionTabs projectId={project.id} active="financeiro" />
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl">Rubricas</h1>

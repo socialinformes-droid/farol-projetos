@@ -21,6 +21,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { BackLink } from '@/components/layout/back-link';
+import { DimensionTabs } from '@/components/layout/dimension-tabs';
 
 type PreviewResult = {
   filename: string;
@@ -142,7 +143,8 @@ export function ImportarView({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <BackLink href={`/projetos/${project.id}`} label={project.name} />
+        <BackLink href={`/projetos/${project.id}/financeiro`} label="Financeiro" />
+        <DimensionTabs projectId={project.id} active="financeiro" />
         <div>
           <h1 className="font-display text-2xl">Importar razão</h1>
           <p className="text-sm text-muted-foreground">

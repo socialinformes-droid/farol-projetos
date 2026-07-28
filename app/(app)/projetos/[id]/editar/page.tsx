@@ -42,6 +42,9 @@ export default async function EditProjectPage({
           transferLimitPct: Number(project.transfer_limit_pct),
           warningThresholdPct: Number(project.warning_threshold_pct),
           notes: project.notes,
+          sgfNumber: project.sgf_number,
+          entity: project.entity,
+          managerName: project.manager_name,
         }}
         onSubmit={boundUpdateProject}
         submitLabel="Salvar alterações"

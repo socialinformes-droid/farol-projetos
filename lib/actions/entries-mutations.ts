@@ -12,7 +12,8 @@ import {
 
 function revalidateEntry(projectId: string) {
   revalidatePath(`/projetos/${projectId}`);
-  revalidatePath(`/projetos/${projectId}/lancamentos`);
+  revalidatePath(`/projetos/${projectId}/financeiro`);
+  revalidatePath(`/projetos/${projectId}/financeiro/lancamentos`);
 }
 
 /**
