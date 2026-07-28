@@ -1,11 +1,10 @@
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { loadPhysicalSchedule } from '@/lib/domain/physical-queries';
-import { FisicoView } from './_view';
+import { ImportarFisicoView } from './_view';
 
 export const dynamic = 'force-dynamic';
 
-export default async function FisicoPage({
+export default async function ImportarFisicoPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,7 +15,5 @@ export default async function FisicoPage({
 
   if (!project) notFound();
 
-  const schedule = await loadPhysicalSchedule(id);
-
-  return <FisicoView project={project} schedule={schedule} />;
+  return <ImportarFisicoView project={project} />;
 }

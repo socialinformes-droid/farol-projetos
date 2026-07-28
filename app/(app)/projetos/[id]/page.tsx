@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { loadProjectSummary } from '@/lib/domain/project-queries';
+import { loadPhysicalSchedule } from '@/lib/domain/physical-queries';
+import { buildPhysicalDashboard } from '@/lib/domain/physical-dashboard';
 import { ProjectOverviewView } from './_view';
 
 export const dynamic = 'force-dynamic';
@@ -12,5 +14,16 @@ export default async function ProjectOverviewPage({
   const { id } = await params;
   const result = await loadProjectSummary(id);
   if (!result) notFound();
-  return <ProjectOverviewView project={result.project} summary={result.summary} />;
+
+  const schedule = await loadPhysicalSchedule(id);
+  const physical = buildPhysicalDashboard(schedule.deliverables, schedule.activities);
+
+  return (
+    <ProjectOverviewView
+      project={result.project}
+      summary={result.summary}
+      physical={physical}
+      hasPhysicalData={schedule.deliverables.length > 0}
+    />
+  );
 }

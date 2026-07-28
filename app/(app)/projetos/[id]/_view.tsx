@@ -10,6 +10,7 @@ import {
 
 import type { ProjectRow } from '@/lib/supabase/types';
 import type { ProjectSummary } from '@/lib/domain/budget';
+import type { PhysicalDashboard } from '@/lib/domain/physical-dashboard';
 import { formatBRL } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,9 +38,13 @@ const STATUS_LABEL: Record<string, string> = {
 export function ProjectOverviewView({
   project,
   summary,
+  physical,
+  hasPhysicalData,
 }: {
   project: ProjectRow;
   summary: ProjectSummary;
+  physical: PhysicalDashboard;
+  hasPhysicalData: boolean;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -92,7 +97,7 @@ export function ProjectOverviewView({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FinanceiroCard projectId={project.id} summary={summary} />
-        <FisicoCard projectId={project.id} />
+        <FisicoCard projectId={project.id} physical={physical} hasPhysicalData={hasPhysicalData} />
       </div>
     </div>
   );
@@ -145,17 +150,52 @@ function FinanceiroCard({
 }
 
 /**
- * O módulo físico ainda não existe — nada aqui vem do banco. É um estado
- * vazio explícito, não um placeholder com números inventados.
+ * Espelha a fila de pendências do dashboard físico: quantas atividades
+ * concluídas de quantas no total, contando (nunca a partir do percentual do
+ * SGF), e quantas ainda esperam ser digitadas de volta no SGF.
  */
-function FisicoCard({ projectId }: { projectId: string }) {
+function FisicoCard({
+  projectId,
+  physical,
+  hasPhysicalData,
+}: {
+  projectId: string;
+  physical: PhysicalDashboard;
+  hasPhysicalData: boolean;
+}) {
+  if (!hasPhysicalData) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <p className="eyebrow">Físico</p>
+          <p className="text-sm text-muted-foreground">Cronograma físico ainda não importado.</p>
+          <DimensionCardLink href={`/projetos/${projectId}/fisico`} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const pct = physical.total > 0 ? (physical.concluded / physical.total) * 100 : 0;
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
         <p className="eyebrow">Físico</p>
-        <p className="text-sm text-muted-foreground">
-          Cronograma físico ainda não importado.
-        </p>
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="font-medium">
+            {physical.concluded} de {physical.total} atividades
+          </span>
+          <span className="text-muted-foreground">{Math.round(pct)}%</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Progress value={Math.min(100, pct)} className="flex-1" />
+          <span className="text-xs tabular-nums text-muted-foreground">{Math.round(pct)}%</span>
+        </div>
+        {physical.queue.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {physical.queue.length} pendente(s) de lançamento no SGF
+          </p>
+        )}
         <DimensionCardLink href={`/projetos/${projectId}/fisico`} />
       </CardContent>
     </Card>
