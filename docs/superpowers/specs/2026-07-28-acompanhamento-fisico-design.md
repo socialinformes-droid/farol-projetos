@@ -132,12 +132,33 @@ realizadas normalmente' ou 'sem alterações'", e pede datas, percentuais, quant
 nomes de entregas. Isso reforça a aposta do módulo: **o texto só fica específico se o registro
 diário existir**. A IA não inventa o que ninguém anotou — ela organiza o que foi anotado.
 
+### A geração acontece dentro do Farol
+
+O texto do monitoramento é redigido **no próprio app**, chamando uma API de IA a partir do
+servidor. O gestor escolhe o período, revisa o que o Farol reuniu e recebe os campos redigidos
+prontos para colar no Forms do PMO.
+
+Implicações técnicas:
+
+- A chamada é **server-side**, em Route Handler. A chave de API nunca vai ao browser — mesma regra
+  que já vale para a service role do Supabase.
+- Chamada de IA custa dinheiro e demora. Gerar sob demanda, com botão explícito, nunca
+  automaticamente ao abrir a tela.
+- O texto gerado deve ser **editável e salvo** junto do período: o gestor vai ajustar, e a versão
+  que ele de fato enviou é o que interessa guardar como histórico.
+- O prompt segue a estrutura do manual do PMO, campo a campo, e recebe apenas os registros do
+  período — não o projeto inteiro.
+
 ### O que a IA não pode gerar
 
 Campos 6, 8 e 9 dependem de julgamento: benefício percebido, probabilidade de um risco, decisão de
 replanejar. O módulo alimenta o factual (o que mudou, quando, quanto) e deixa explícito o que
 precisa de quem conhece o projeto. Prometer geração completa desses campos produziria texto
 plausível e vazio — exatamente o que o manual proíbe.
+
+A saída deve marcar esses trechos como rascunho a confirmar, em vez de afirmar com segurança o que
+ninguém verificou. Um risco inventado por inferência é pior que um campo em branco: ele passa por
+análise e vira compromisso.
 
 ## 4d. O fluxo é de mão dupla
 
@@ -237,8 +258,10 @@ senha compartilhada e não sabe quem está digitando. Alternativa sem construir 
 autor alimentado pela lista de responsáveis que veio do próprio SGF — resolve a atribuição no
 monitoramento sem virar sistema de contas.
 
-**Formato da exportação para a IA.** Texto corrido, Markdown estruturado, JSON? E o monitoramento
-final é gerado dentro do Farol, ou o Farol só produz o insumo e a redação acontece fora?
+**Qual provedor e modelo de IA.** A geração é dentro do Farol, via API. Falta decidir o provedor e
+onde a chave é gerenciada (variável de ambiente na Vercel, como as demais). Vale também definir um
+teto de custo por geração — o insumo de um mês são poucas dezenas de registros, então a chamada é
+barata, mas convém não deixar em aberto.
 
 **Sincronização.** O escopo físico muda ao longo do projeto (o relatório tem seção *Histórico
 Solicitação de Mudança*). Reimportar precisa preservar os comentários e as datas reais já
