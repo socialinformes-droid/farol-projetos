@@ -113,6 +113,21 @@ export function MonitoramentoDetalheView({
       const json = await res.json();
 
       if (!res.ok) {
+        // 409 não é falha: é a barreira de análise segurando a geração até que
+        // os apontamentos críticos sejam resolvidos. Sem o caminho de volta, a
+        // mensagem vira um beco sem saída — o usuário lê "erro" e não sabe
+        // para onde ir.
+        if (res.status === 409) {
+          toast.warning(json.error ?? 'Há apontamentos críticos pendentes.', {
+            duration: 10000,
+            action: {
+              label: 'Abrir análise',
+              onClick: () =>
+                router.push(`/projetos/${project.id}/monitoramento/${current.id}/analise`),
+            },
+          });
+          return;
+        }
         toast.error(
           json.error ?? 'Falha ao gerar com IA. O registro factual já foi salvo.',
         );
@@ -192,7 +207,17 @@ export function MonitoramentoDetalheView({
               Análise do período
               {pendingCriticalCount > 0 && <Badge variant="destructive">{pendingCriticalCount}</Badge>}
             </Button>
-            <Button type="button" variant="outline" onClick={handleGenerate} disabled={generating}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGenerate}
+              disabled={generating}
+              title={
+                pendingCriticalCount > 0
+                  ? `${pendingCriticalCount} apontamento(s) crítico(s) precisam ser resolvidos na análise antes de gerar.`
+                  : undefined
+              }
+            >
               <SparklesIcon className="size-4" />
               {generating ? 'Gerando…' : 'Gerar com IA'}
             </Button>
