@@ -104,16 +104,55 @@ perderia essa leitura, que é justamente o que o monitoramento precisa explicar.
 - Exportação do que mudou num intervalo, incluindo comentários
 - Indicador de dias desde o último monitoramento registrado
 
-## 4b. O relatório de saída (monitoramento)
+## 4b. O destino: formulário PMO DR/AL
 
-Ainda não definido. O mais próximo que o SGF traz é a seção **Monitoramento** (página 14 do
-relatório), que é texto corrido assinado por um responsável do DR, com data de atualização. No
-projeto de referência ele descreve objetivo, fase atual, situação do cronograma físico, situação
-do cronograma financeiro e riscos — nessa ordem.
+O monitoramento é entregue num **Microsoft Forms** mensal do PMO DR/AL, com seis campos de texto
+livre além da identificação. Esse é o alvo da exportação — tudo que o módulo produz existe para
+preencher estes campos.
 
-Se o monitoramento que você entrega tem esse formato, ele é o alvo: o módulo junta o que foi
-realizado e comentado no período e a IA redige um texto nesse molde. **Confirmar antes de
-desenhar a exportação**, porque o formato do insumo depende do formato do destino.
+| # | Campo do formulário | Origem no Farol |
+|---|---|---|
+| 1 | Nome ou Nº do Projeto no SGF | cadastro (o número do SGF, hoje ausente) |
+| 2 | SESI ou SENAI | cadastro |
+| 3 | Mês de referência | período selecionado na exportação |
+| 4 | Nome do gestor | cadastro |
+| 5 | **Cronograma físico** — marcos concluídos/adiados, variações, planos de ação | módulo físico: entregas e atividades com mudança de status no período, atrasos derivados de previsto × real, comentários registrados |
+| 6 | **Resultados alcançados** e benefícios | comentários — é o campo que só existe se alguém escreveu; nenhum dado estruturado o produz |
+| 7 | **Cronograma financeiro** — execução do mês, aquisições/contratações | módulo financeiro: lançamentos do período, execução acumulada, **remanejamento entre rubricas** |
+| 8 | **Riscos** — descrição, probabilidade, impacto, mitigação, responsável, prazo | atrasos e baixa execução são detectáveis; probabilidade, mitigação e responsável são julgamento humano |
+| 9 | **Conclusão e próximos passos** | atividades com início previsto no período seguinte + julgamento humano |
+
+O manual do PMO (seção 4.3) pede, textualmente: *"Identificou-se a necessidade de remanejamento
+entre as rubricas [rubricas], sem alteração do valor total aprovado para o projeto."* **É
+exatamente o que o cálculo do teto de 25% já produz** — o módulo financeiro existente já é insumo
+direto do campo 7, sem nada a construir.
+
+O manual também adverte contra "expressões genéricas como 'projeto em andamento', 'atividades
+realizadas normalmente' ou 'sem alterações'", e pede datas, percentuais, quantidades, valores e
+nomes de entregas. Isso reforça a aposta do módulo: **o texto só fica específico se o registro
+diário existir**. A IA não inventa o que ninguém anotou — ela organiza o que foi anotado.
+
+### O que a IA não pode gerar
+
+Campos 6, 8 e 9 dependem de julgamento: benefício percebido, probabilidade de um risco, decisão de
+replanejar. O módulo alimenta o factual (o que mudou, quando, quanto) e deixa explícito o que
+precisa de quem conhece o projeto. Prometer geração completa desses campos produziria texto
+plausível e vazio — exatamente o que o manual proíbe.
+
+## 4c. Navegação
+
+O Farol mantém a instância geral com a lista de projetos. Dentro de um projeto, duas visões
+irmãs, cada uma com sua medição:
+
+```
+/                          lista de projetos
+/projetos/[id]             visão geral do projeto
+   ├── Financeiro          orçamento, rubricas, lançamentos, import do razão   (existe)
+   └── Físico              entregas, atividades, comentários, import do SGF    (a construir)
+```
+
+O dashboard do projeto passa a resumir as duas dimensões lado a lado — execução financeira e
+execução física — que é como o monitoramento as reporta.
 
 ## 5. Relação com o módulo financeiro
 
