@@ -138,12 +138,39 @@ export type ActivityCommentRow = {
   created_at: string;
 };
 
+/**
+ * Monitoramento periódico do PMO DR/AL (migração 0009). `snapshot` guarda o
+ * insumo bruto que gerou os campos — deliberadamente tipado como blob JSON
+ * cru aqui (não como `MonitoringSnapshot` de `lib/domain/monitoring-snapshot`)
+ * para não criar dependência circular entre este arquivo e o domínio; quem
+ * consome o snapshot tipado faz o parse na camada de actions/queries.
+ */
+export type MonitoringRow = {
+  id: string;
+  project_id: string;
+  period_start: string;
+  period_end: string;
+  reference_label: string | null;
+  desempenho_fisico: string | null;
+  resultados: string | null;
+  desempenho_financeiro: string | null;
+  riscos: string | null;
+  conclusao: string | null;
+  snapshot: Record<string, unknown> | null;
+  generated_at: string | null;
+  generated_model: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectInsert = Omit<ProjectRow, 'id' | 'created_at' | 'updated_at'>;
 export type BudgetLineInsert = Omit<BudgetLineRow, 'id' | 'created_at' | 'updated_at'>;
 export type LedgerEntryInsert = Omit<LedgerEntryRow, 'id' | 'created_at' | 'updated_at'>;
 export type DeliverableInsert = Omit<DeliverableRow, 'id' | 'created_at' | 'updated_at'>;
 export type ActivityInsert = Omit<ActivityRow, 'id' | 'created_at' | 'updated_at'>;
 export type ActivityCommentInsert = Omit<ActivityCommentRow, 'id' | 'created_at'>;
+export type MonitoringInsert = Omit<MonitoringRow, 'id' | 'created_at' | 'updated_at'>;
 
 // `updated_at` não tem trigger no banco — a aplicação é quem o define a cada
 // update, por isso os tipos de Update (diferente dos de Insert) o incluem.
@@ -153,6 +180,7 @@ export type LedgerEntryUpdate = Partial<Omit<LedgerEntryRow, 'id' | 'created_at'
 export type AppSettingsUpdate = Partial<Omit<AppSettingsRow, 'id'>>;
 export type DeliverableUpdate = Partial<Omit<DeliverableRow, 'id' | 'created_at'>>;
 export type ActivityUpdate = Partial<Omit<ActivityRow, 'id' | 'created_at'>>;
+export type MonitoringUpdate = Partial<Omit<MonitoringRow, 'id' | 'created_at'>>;
 
 export type Database = {
   public: {
@@ -165,6 +193,7 @@ export type Database = {
       deliverables:      { Row: DeliverableRow;      Insert: DeliverableInsert;      Update: DeliverableUpdate;      Relationships: [] };
       activities:        { Row: ActivityRow;         Insert: ActivityInsert;         Update: ActivityUpdate;         Relationships: [] };
       activity_comments: { Row: ActivityCommentRow;  Insert: ActivityCommentInsert;  Update: Partial<ActivityCommentRow>; Relationships: [] };
+      monitorings:       { Row: MonitoringRow;       Insert: MonitoringInsert;       Update: MonitoringUpdate;       Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
