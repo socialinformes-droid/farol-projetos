@@ -10,7 +10,7 @@ import 'server-only';
  * qualquer import a partir de um Client Component quebra o build.
  */
 
-export type ChatMessage = { role: 'system' | 'user'; content: string };
+export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export type AiErrorKind = 'chave_ausente' | 'saldo_insuficiente' | 'tempo_esgotado' | 'erro_generico';
 

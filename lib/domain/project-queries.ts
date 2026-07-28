@@ -80,3 +80,23 @@ export async function loadProjectSummary(
     ),
   };
 }
+
+/**
+ * Amostra limitada dos lançamentos mais recentes de um projeto — usada só
+ * pelo contexto do chat lateral (`lib/domain/chat-context.ts`). Deliberadamente
+ * não é "todo o razão": o contexto do chat não pode crescer com o histórico
+ * do projeto.
+ */
+export async function loadRecentLedgerEntries(
+  projectId: string,
+  limit: number,
+): Promise<LedgerEntryRow[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('ledger_entries')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('entry_date', { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
