@@ -20,6 +20,22 @@ export async function POST(request: Request) {
   if (!context || typeof context !== 'object') {
     return NextResponse.json({ error: 'Contexto do projeto não informado.' }, { status: 400 });
   }
+
+  // O contexto vem montado pelo servidor, mas um objeto incompleto faria o
+  // construtor de mensagens quebrar com TypeError — que a captura genérica lá
+  // embaixo transformaria num 502 "não foi possível consultar a IA",
+  // apontando para a IA um erro que nunca chegou nela. Falhar aqui, com o
+  // campo que faltou, poupa a investigação.
+  const faltando = (
+    ['projectName', 'totalBudget', 'realized', 'delayedActivities', 'recentEntries'] as const
+  ).filter((campo) => context[campo] === undefined || context[campo] === null);
+
+  if (faltando.length > 0) {
+    return NextResponse.json(
+      { error: `Contexto do projeto incompleto: falta ${faltando.join(', ')}.` },
+      { status: 400 },
+    );
+  }
   if (!Array.isArray(historyRaw)) {
     return NextResponse.json({ error: 'Histórico de mensagens inválido.' }, { status: 400 });
   }
