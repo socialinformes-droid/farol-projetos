@@ -1,7 +1,8 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 
@@ -95,6 +96,7 @@ export function ProjectForm({
     control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -114,10 +116,44 @@ export function ProjectForm({
       sgfNumber: defaultValues?.sgfNumber ?? null,
       entity: defaultValues?.entity ?? null,
       managerName: defaultValues?.managerName ?? null,
+      contextDocument: defaultValues?.contextDocument ?? null,
+      contextDocumentName: defaultValues?.contextDocumentName ?? null,
     },
   });
 
   const totalBudget = useWatch({ control, name: 'totalBudget' });
+  const contextDocumentName = useWatch({ control, name: 'contextDocumentName' });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [extractionTrimmed, setExtractionTrimmed] = useState(false);
+
+  async function handleContextFile(file: File) {
+    setExtracting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/projeto/contexto', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? 'Não foi possível ler o PDF.');
+        return;
+      }
+      setValue('contextDocument', data.text, { shouldDirty: true });
+      setValue('contextDocumentName', file.name, { shouldDirty: true });
+      setExtractionTrimmed(Boolean(data.trimmed));
+      toast.success(
+        `Texto extraído: ${data.text.length} caractere(s)${
+          typeof data.pages === 'number' ? ` de um PDF com ${data.pages} página(s)` : ''
+        }.`,
+      );
+    } catch {
+      toast.error('Não foi possível enviar o PDF. Tente novamente.');
+    } finally {
+      setExtracting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
 
   async function submit(values: ProjectFormValues) {
     const result = await onSubmit(values);
@@ -397,11 +433,70 @@ export function ProjectForm({
         />
       </div>
 
+      <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+        <Label htmlFor="contextDocumentFile">Documento do projeto</Label>
+        <p className="text-xs text-muted-foreground">
+          Anexe o relatório do projeto (PDF do SGF) para a IA conhecer o objetivo e o escopo ao
+          redigir o monitoramento. O texto extraído aparece abaixo — revise e corrija antes de
+          salvar.
+        </p>
+        <Input
+          id="contextDocumentFile"
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          disabled={extracting}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleContextFile(file);
+          }}
+        />
+        {extracting && <p className="text-xs text-muted-foreground">Lendo PDF…</p>}
+        <Controller
+          control={control}
+          name="contextDocument"
+          render={({ field }) => (
+            <Textarea
+              id="contextDocument"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(e.target.value || null)}
+              placeholder="Cole ou digite aqui o objetivo, o escopo e a justificativa do projeto — a IA usa este texto como contexto do que foi prometido, não como registro de execução."
+              className="min-h-40"
+            />
+          )}
+        />
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {contextDocumentName ? `Fonte: ${contextDocumentName}` : 'Sem arquivo anexado — pode digitar direto.'}
+          </span>
+          <ContextCharCount control={control} trimmed={extractionTrimmed} />
+        </div>
+        {errors.contextDocument && (
+          <p className="text-xs text-destructive">{errors.contextDocument.message}</p>
+        )}
+      </div>
+
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {submitLabel}
         </Button>
       </div>
     </form>
+  );
+}
+
+function ContextCharCount({
+  control,
+  trimmed,
+}: {
+  control: Control<ProjectFormValues>;
+  trimmed: boolean;
+}) {
+  const text = useWatch({ control, name: 'contextDocument' });
+  const length = text?.length ?? 0;
+  return (
+    <span>
+      {length} caractere(s){trimmed && length > 0 ? ' — texto cortado; complete o que faltar' : ''}
+    </span>
   );
 }

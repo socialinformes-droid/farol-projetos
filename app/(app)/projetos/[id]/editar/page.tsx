@@ -45,6 +45,8 @@ export default async function EditProjectPage({
           sgfNumber: project.sgf_number,
           entity: project.entity,
           managerName: project.manager_name,
+          contextDocument: project.context_document,
+          contextDocumentName: project.context_document_name,
         }}
         onSubmit={boundUpdateProject}
         submitLabel="Salvar alterações"
