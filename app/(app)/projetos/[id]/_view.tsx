@@ -11,7 +11,6 @@ import {
 import type { ProjectRow, MonitoringRow } from '@/lib/supabase/types';
 import type { ProjectSummary } from '@/lib/domain/budget';
 import type { PhysicalDashboard } from '@/lib/domain/physical-dashboard';
-import type { ProjectChatContext } from '@/lib/domain/chat-context';
 import { formatBRL, formatDateBR } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,6 @@ import {
   DropdownMenuLinkItem,
 } from '@/components/ui/dropdown-menu';
 import { BackLink } from '@/components/layout/back-link';
-import { ProjectChatSheet } from '@/components/project/project-chat-sheet';
 
 const STATUS_LABEL: Record<string, string> = {
   planejamento: 'Planejamento',
@@ -43,14 +41,12 @@ export function ProjectOverviewView({
   physical,
   hasPhysicalData,
   latestMonitoring,
-  chatContext,
 }: {
   project: ProjectRow;
   summary: ProjectSummary;
   physical: PhysicalDashboard;
   hasPhysicalData: boolean;
   latestMonitoring: MonitoringRow | null;
-  chatContext: ProjectChatContext;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -68,7 +64,6 @@ export function ProjectOverviewView({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <ProjectChatSheet context={chatContext} />
             <Button
               variant="outline"
               nativeButton={false}

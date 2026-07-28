@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { ProjectChatContext } from '@/lib/domain/chat-context';
+import { loadProjectChatContext } from '@/lib/domain/chat-context-loader';
 import { buildChatMessages } from '@/lib/domain/chat-prompt';
 import { generateText, AiGenerationError, type ChatMessage } from '@/lib/ai/deepseek';
 
@@ -7,34 +7,20 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 /**
- * Chat lateral de dúvidas sobre um projeto — efêmero: esta rota não lê nem
- * grava nada no Supabase. O contexto (`context`) já chega pronto, montado
- * pela página do projeto no servidor (`lib/domain/chat-context.ts`); esta
- * rota só transforma contexto + histórico em mensagens e chama a IA.
+ * Chat lateral de dúvidas sobre um projeto — efêmero: a única coisa que esta
+ * rota grava é nada. Recebe só `projectId` e o histórico da conversa; monta
+ * o contexto do projeto aqui mesmo (`lib/domain/chat-context-loader.ts`), a
+ * partir do Supabase, a cada pergunta. O chat aparece em toda tela do
+ * projeto agora, então o contexto não pode chegar pronto de cada página —
+ * ele nasce aqui, sob demanda, e nunca é reaproveitado entre requisições.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const context = body?.context as ProjectChatContext | null | undefined;
+  const projectId = body?.projectId;
   const historyRaw = body?.messages;
 
-  if (!context || typeof context !== 'object') {
-    return NextResponse.json({ error: 'Contexto do projeto não informado.' }, { status: 400 });
-  }
-
-  // O contexto vem montado pelo servidor, mas um objeto incompleto faria o
-  // construtor de mensagens quebrar com TypeError — que a captura genérica lá
-  // embaixo transformaria num 502 "não foi possível consultar a IA",
-  // apontando para a IA um erro que nunca chegou nela. Falhar aqui, com o
-  // campo que faltou, poupa a investigação.
-  const faltando = (
-    ['projectName', 'totalBudget', 'realized', 'delayedActivities', 'recentEntries'] as const
-  ).filter((campo) => context[campo] === undefined || context[campo] === null);
-
-  if (faltando.length > 0) {
-    return NextResponse.json(
-      { error: `Contexto do projeto incompleto: falta ${faltando.join(', ')}.` },
-      { status: 400 },
-    );
+  if (typeof projectId !== 'string' || projectId.trim() === '') {
+    return NextResponse.json({ error: 'Projeto não informado.' }, { status: 400 });
   }
   if (!Array.isArray(historyRaw)) {
     return NextResponse.json({ error: 'Histórico de mensagens inválido.' }, { status: 400 });
@@ -51,6 +37,11 @@ export async function POST(request: Request) {
 
   if (history.length === 0) {
     return NextResponse.json({ error: 'Nenhuma pergunta informada.' }, { status: 400 });
+  }
+
+  const context = await loadProjectChatContext(projectId);
+  if (!context) {
+    return NextResponse.json({ error: 'Projeto não encontrado.' }, { status: 404 });
   }
 
   try {
