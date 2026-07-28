@@ -8,10 +8,10 @@ import {
   FileTextIcon,
 } from 'lucide-react';
 
-import type { ProjectRow } from '@/lib/supabase/types';
+import type { ProjectRow, MonitoringRow } from '@/lib/supabase/types';
 import type { ProjectSummary } from '@/lib/domain/budget';
 import type { PhysicalDashboard } from '@/lib/domain/physical-dashboard';
-import { formatBRL } from '@/lib/format';
+import { formatBRL, formatDateBR } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,11 +40,13 @@ export function ProjectOverviewView({
   summary,
   physical,
   hasPhysicalData,
+  latestMonitoring,
 }: {
   project: ProjectRow;
   summary: ProjectSummary;
   physical: PhysicalDashboard;
   hasPhysicalData: boolean;
+  latestMonitoring: MonitoringRow | null;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -95,9 +97,10 @@ export function ProjectOverviewView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <FinanceiroCard projectId={project.id} summary={summary} />
         <FisicoCard projectId={project.id} physical={physical} hasPhysicalData={hasPhysicalData} />
+        <MonitoramentoCard projectId={project.id} latestMonitoring={latestMonitoring} />
       </div>
     </div>
   );
@@ -197,6 +200,53 @@ function FisicoCard({
           </p>
         )}
         <DimensionCardLink href={`/projetos/${projectId}/fisico`} />
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Espelha o que o gestor precisa saber num relance: quando foi o último
+ * monitoramento enviado ao PMO e se já passou muito tempo (o SGF cobra a
+ * falta disso — "28 dias sem monitoramento" é a dor que este módulo existe
+ * para resolver).
+ */
+function MonitoramentoCard({
+  projectId,
+  latestMonitoring,
+}: {
+  projectId: string;
+  latestMonitoring: MonitoringRow | null;
+}) {
+  if (!latestMonitoring) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <p className="eyebrow">Monitoramento</p>
+          <p className="text-sm text-muted-foreground">Nenhum monitoramento registrado ainda.</p>
+          <DimensionCardLink href={`/projetos/${projectId}/monitoramento`} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const label = latestMonitoring.reference_label
+    ? latestMonitoring.reference_label
+    : `${formatDateBR(latestMonitoring.period_start)} a ${formatDateBR(latestMonitoring.period_end)}`;
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <p className="eyebrow">Monitoramento</p>
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="font-medium">Último período: {label}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {latestMonitoring.submitted_at
+            ? `Enviado ao PMO em ${formatDateBR(latestMonitoring.submitted_at)}`
+            : 'Ainda não enviado ao PMO — rascunho pronto para revisão'}
+        </p>
+        <DimensionCardLink href={`/projetos/${projectId}/monitoramento`} />
       </CardContent>
     </Card>
   );
