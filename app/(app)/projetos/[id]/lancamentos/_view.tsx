@@ -73,6 +73,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { BackLink } from '@/components/layout/back-link';
 
 // Sentinela usado no filtro de rubrica: "Sem rubrica" precisa de um valor
 // próprio na query string / estado, já que `budget_line_id` nulo não tem
@@ -325,17 +326,20 @@ export function LancamentosView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl">Lançamentos</h1>
-          <p className="text-sm text-muted-foreground">
-            {project.code} — {project.name}
-          </p>
+      <div className="flex flex-col gap-2">
+        <BackLink href={`/projetos/${project.id}`} label={project.name} />
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="font-display text-2xl">Lançamentos</h1>
+            <p className="text-sm text-muted-foreground">
+              {project.code} — {project.name}
+            </p>
+          </div>
+          <Button onClick={() => setNewOpen(true)}>
+            <PlusIcon className="size-4" />
+            Novo lançamento
+          </Button>
         </div>
-        <Button onClick={() => setNewOpen(true)}>
-          <PlusIcon className="size-4" />
-          Novo lançamento
-        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ProjectForm } from '@/components/forms/project-form';
 import { updateProject } from '@/lib/actions/projects';
 import { loadProjectSummary } from '@/lib/domain/project-queries';
+import { BackLink } from '@/components/layout/back-link';
 import { DeleteProjectDialog } from './delete-project-dialog';
 
 export const dynamic = 'force-dynamic';
@@ -21,9 +22,12 @@ export default async function EditProjectPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl">Editar projeto</h1>
-        <DeleteProjectDialog projectId={project.id} projectName={project.name} />
+      <div className="flex flex-col gap-2">
+        <BackLink href={`/projetos/${id}`} label={project.name} />
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-2xl">Editar projeto</h1>
+          <DeleteProjectDialog projectId={project.id} projectName={project.name} />
+        </div>
       </div>
       <ProjectForm
         defaultValues={{

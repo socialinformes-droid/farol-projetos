@@ -25,6 +25,7 @@ import {
   DropdownMenuContent,
   DropdownMenuLinkItem,
 } from '@/components/ui/dropdown-menu';
+import { BackLink } from '@/components/layout/back-link';
 import { ProjectAlerts } from '@/components/project/project-alerts';
 import { TransferCapMeter } from '@/components/project/transfer-cap-meter';
 import { BudgetExecutionMeter } from '@/components/project/budget-execution-meter';
@@ -63,61 +64,64 @@ export function ProjectDashboardView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl">{project.name}</h1>
-            <Badge variant="outline">{STATUS_LABEL[project.status]}</Badge>
+      <div className="flex flex-col gap-2">
+        <BackLink href="/" label="Projetos" />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-2xl">{project.name}</h1>
+              <Badge variant="outline">{STATUS_LABEL[project.status]}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">{project.code}</p>
           </div>
-          <p className="text-sm text-muted-foreground">{project.code}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" nativeButton={false} render={<Link href={`/projetos/${project.id}/rubricas`} />}>
-            Rubricas
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={`/projetos/${project.id}/lancamentos`} />}
-          >
-            Lançamentos
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={`/projetos/${project.id}/importar`} />}
-          >
-            Importar
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={`/projetos/${project.id}/editar`} />}
-          >
-            Editar
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="outline" />}>
-              <DownloadIcon className="size-4" />
-              Exportar
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLinkItem
-                href={`/api/export?projeto=${project.id}&formato=xlsx`}
-                download
-              >
-                <FileSpreadsheetIcon />
-                Excel (.xlsx)
-              </DropdownMenuLinkItem>
-              <DropdownMenuLinkItem
-                href={`/api/export?projeto=${project.id}&formato=csv`}
-                download
-              >
-                <FileTextIcon />
-                CSV
-              </DropdownMenuLinkItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" nativeButton={false} render={<Link href={`/projetos/${project.id}/rubricas`} />}>
+              Rubricas
+            </Button>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/projetos/${project.id}/lancamentos`} />}
+            >
+              Lançamentos
+            </Button>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/projetos/${project.id}/importar`} />}
+            >
+              Importar
+            </Button>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/projetos/${project.id}/editar`} />}
+            >
+              Editar
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="outline" />}>
+                <DownloadIcon className="size-4" />
+                Exportar
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLinkItem
+                  href={`/api/export?projeto=${project.id}&formato=xlsx`}
+                  download
+                >
+                  <FileSpreadsheetIcon />
+                  Excel (.xlsx)
+                </DropdownMenuLinkItem>
+                <DropdownMenuLinkItem
+                  href={`/api/export?projeto=${project.id}&formato=csv`}
+                  download
+                >
+                  <FileTextIcon />
+                  CSV
+                </DropdownMenuLinkItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

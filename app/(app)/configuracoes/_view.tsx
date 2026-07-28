@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { BackLink } from '@/components/layout/back-link';
 
 export function SettingsView({ settings }: { settings: AppSettings }) {
   const {
@@ -39,7 +40,10 @@ export function SettingsView({ settings }: { settings: AppSettings }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="font-display text-2xl">Configurações</h1>
+      <div className="flex flex-col gap-2">
+        <BackLink href="/" label="Projetos" />
+        <h1 className="font-display text-2xl">Configurações</h1>
+      </div>
 
       <Card className="max-w-xl">
         <CardContent className="flex flex-col gap-5">

@@ -20,6 +20,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { BackLink } from '@/components/layout/back-link';
 
 type PreviewResult = {
   filename: string;
@@ -140,11 +141,14 @@ export function ImportarView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl">Importar razão</h1>
-        <p className="text-sm text-muted-foreground">
-          {project.code} — {project.name}
-        </p>
+      <div className="flex flex-col gap-2">
+        <BackLink href={`/projetos/${project.id}`} label={project.name} />
+        <div>
+          <h1 className="font-display text-2xl">Importar razão</h1>
+          <p className="text-sm text-muted-foreground">
+            {project.code} — {project.name}
+          </p>
+        </div>
       </div>
 
       {!result && (
