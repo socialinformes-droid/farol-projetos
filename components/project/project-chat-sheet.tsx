@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { MessageCircleQuestionIcon, SendIcon } from 'lucide-react';
 
-import type { ProjectChatContext } from '@/lib/domain/chat-context';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,13 +18,15 @@ import {
 type ChatTurn = { role: 'user' | 'assistant'; content: string };
 
 /**
- * Painel lateral de dúvidas sobre o projeto — 100% efêmero: as mensagens só
- * existem neste estado do componente, nunca são gravadas em lugar nenhum, e
- * somem ao fechar. `context` já chega pronto do servidor (a página do
- * projeto monta em `lib/domain/chat-context.ts`); este componente nunca
- * consulta o Supabase, só reenvia o contexto recebido a cada pergunta.
+ * Botão flutuante (canto inferior) presente em toda tela dentro de um
+ * projeto — renderizado pelo `layout.tsx` do projeto, não por cada página.
+ * Abre um painel de dúvidas 100% efêmero: as mensagens só existem neste
+ * estado do componente, nunca são gravadas em lugar nenhum, e somem ao
+ * fechar. Este componente nunca consulta o Supabase — só manda `projectId`
+ * e o histórico da conversa para `/api/chat`, que monta o contexto do
+ * projeto no servidor a cada pergunta (`lib/domain/chat-context-loader.ts`).
  */
-export function ProjectChatSheet({ context }: { context: ProjectChatContext }) {
+export function ProjectChatSheet({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState('');
@@ -52,7 +53,7 @@ export function ProjectChatSheet({ context }: { context: ProjectChatContext }) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context, messages: nextTurns }),
+        body: JSON.stringify({ projectId, messages: nextTurns }),
       });
       const json = await res.json();
 
@@ -77,7 +78,15 @@ export function ProjectChatSheet({ context }: { context: ProjectChatContext }) {
       }}
     >
       <SheetTrigger
-        render={<Button type="button" variant="outline" size="icon" title="Dúvidas sobre o projeto" />}
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            title="Dúvidas sobre o projeto"
+            className="fixed right-4 bottom-4 z-40 rounded-full border-border bg-background shadow-md hover:shadow-lg md:right-6 md:bottom-6"
+          />
+        }
       >
         <MessageCircleQuestionIcon className="size-4" />
         <span className="sr-only">Dúvidas sobre o projeto</span>
@@ -86,7 +95,7 @@ export function ProjectChatSheet({ context }: { context: ProjectChatContext }) {
         <SheetHeader>
           <SheetTitle>Dúvidas sobre o projeto</SheetTitle>
           <SheetDescription>
-            Pergunte sobre os números deste projeto. As respostas usam só os dados já carregados aqui —
+            Pergunte sobre os números deste projeto. As respostas usam só os dados deste projeto —
             a conversa some ao fechar este painel.
           </SheetDescription>
         </SheetHeader>
