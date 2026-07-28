@@ -20,6 +20,13 @@ function toRow(input: ProjectFormValues) {
     sgf_number: input.sgfNumber,
     entity: input.entity,
     manager_name: input.managerName,
+    context_document: input.contextDocument,
+    context_document_name: input.contextDocumentName,
+    // Carimba sempre que o formulário é salvo com texto de contexto — não há
+    // como distinguir aqui "texto igual ao de antes" de "texto corrigido
+    // agora", então a marca é "a última vez que este projeto foi salvo com
+    // documento anexado". Sem documento, fica null.
+    context_updated_at: input.contextDocument ? new Date().toISOString() : null,
   };
 }
 

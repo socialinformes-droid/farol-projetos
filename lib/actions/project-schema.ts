@@ -37,6 +37,19 @@ export const projectFormSchema = z.object({
   sgfNumber: z.string().trim().nullable(),
   entity: z.enum(['SESI', 'SENAI']).nullable(),
   managerName: z.string().trim().nullable(),
+  /**
+   * Documento do projeto como contexto da IA (migração 0011). Texto
+   * extraído/editado pelo gestor, não o arquivo — todos opcionais, projeto
+   * sem documento anexado segue válido. Limite de caracteres mantém o
+   * payload de toda chamada de IA (monitoramento e chat) sob controle mesmo
+   * que o gestor cole um texto enorme direto na textarea, sem passar pela
+   * extração de PDF (que já corta em ~8.000 caracteres sozinha).
+   */
+  contextDocument: z
+    .string()
+    .max(20_000, 'O texto do documento não pode passar de 20.000 caracteres.')
+    .nullable(),
+  contextDocumentName: z.string().trim().nullable(),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

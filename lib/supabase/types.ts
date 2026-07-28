@@ -32,6 +32,16 @@ export type ProjectRow = {
   sgf_number: string | null;
   entity: ProjectEntity | null;
   manager_name: string | null;
+  /**
+   * Documento do projeto como contexto da IA (migração 0011) — o TEXTO
+   * extraído do PDF do relatório do SGF, não o arquivo. Alimenta o prompt de
+   * monitoramento e o chat lateral com o que foi PROMETIDO (objetivo,
+   * escopo), nunca com evidência de execução. Todos nullable: projeto sem
+   * documento anexado segue funcionando normalmente.
+   */
+  context_document: string | null;
+  context_document_name: string | null;
+  context_updated_at: string | null;
   created_at: string;
   updated_at: string;
 };
