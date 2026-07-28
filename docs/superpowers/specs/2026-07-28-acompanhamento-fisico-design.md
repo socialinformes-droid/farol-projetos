@@ -160,6 +160,36 @@ A saída deve marcar esses trechos como rascunho a confirmar, em vez de afirmar 
 ninguém verificou. Um risco inventado por inferência é pior que um campo em branco: ele passa por
 análise e vira compromisso.
 
+## 4e. Percentual de execução física
+
+**A coluna `% de Realização` do SGF é ignorada.** Ela existe, mas nos dados reais só assume `0,00`
+ou `100,00` — é redundante com o status e não traz granularidade nenhuma.
+
+O percentual é **derivado da contagem de atividades concluídas**, que é como o gestor já raciocina:
+
+```
+execução física do projeto = atividades concluídas ÷ total de atividades
+execução física da entrega  = atividades concluídas na entrega ÷ atividades da entrega
+```
+
+No projeto de referência: 15 concluídas de 30 = **50%**. Por entrega, cada uma tem 3 atividades,
+então os valores são 0%, 33%, 67% ou 100%.
+
+Isso conversa bem com o módulo financeiro, que já expõe execução orçamentária em percentual — o
+dashboard passa a mostrar as duas leituras lado a lado, que é como o monitoramento as reporta.
+
+Não há campo de percentual a editar nem a manter sincronizado: ele é sempre calculado.
+
+### Um detalhe do SGF que o Farol corrige
+
+No SGF, `Em andamento` significa apenas "não concluído" — inclusive atividades que só começam em
+novembro estão assim, marcadas em 28/04 e nunca mais tocadas. O SGF não distingue **o que ainda
+não começou** do **que está em curso**.
+
+O Farol distingue sem campo extra: se a atividade tem data real de início e não tem data real de
+fim, está em curso. Se não tem nenhuma das duas, não começou. É informação que o monitoramento
+pede ("entregas em andamento") e que hoje não existe na fonte.
+
 ## 4d. O fluxo é de mão dupla
 
 O Farol não é só destino do escopo do SGF. Ele é onde o andamento é **registrado na hora**, e é
@@ -271,9 +301,8 @@ uma correção de chave.
 **Status intermediário.** Resolvido pelo `.xls`: o SGF usa `Concluido` e `Em andamento`, e ainda
 traz `% de Realização` por atividade. Não é preciso inventar status nenhum.
 
-**O que fazer com `% de Realização`.** O SGF já registra o percentual, hoje sempre 0 ou 100 nos
-dados reais. Vale editar esse número no Farol, ou o par status + datas reais basta? Editar implica
-decidir o que acontece com ele na reimportação.
+**Qual provedor e modelo de IA.** Definido: **DeepSeek**. Falta escolher o modelo e definir o teto
+de custo por geração. A chave vive em `DEEPSEEK_API_KEY`, server-side, nunca no browser.
 
 ## 7. Fora de escopo nesta versão
 
