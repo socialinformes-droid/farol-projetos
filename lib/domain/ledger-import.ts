@@ -33,7 +33,7 @@ export type ParsedEntry = {
   accountName: string;
   entryDate: string;
   amount: number;
-  kind: 'despesa' | 'baixa';
+  kind: 'despesa' | 'aporte';
   description: string | null;
   voucher: string | null;
   journal: string | null;
@@ -143,9 +143,10 @@ export function parseLedgerRows(rows: string[][]): ParseResult {
       accountName: account.name,
       entryDate,
       amount,
-      // Contas do grupo 4 com valor negativo são a contrapartida contábil
-      // (baixa de projeto), não despesa.
-      kind: account.code.startsWith('4') && amount < 0 ? 'baixa' : 'despesa',
+      // Conta do grupo 4 com valor negativo é o aporte recebido no projeto —
+      // o razão a registra como crédito, daí o sinal. Não é despesa nem
+      // dedução de despesa: é entrada de recurso.
+      kind: account.code.startsWith('4') && amount < 0 ? 'aporte' : 'despesa',
       description: nullIfEmpty(at(row, 'Descrição')),
       voucher: nullIfEmpty(at(row, 'Comprovante')),
       journal: nullIfEmpty(at(row, 'Diário')),

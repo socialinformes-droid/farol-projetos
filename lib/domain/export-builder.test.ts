@@ -34,7 +34,9 @@ const summary: ProjectSummary = {
   transferred: 2000,
   transferCap: 25000,
   capUsagePct: 8,
-  writeoffs: -41156.24,
+  contributions: 41156.24,
+  cashBalance: -7262.87,
+  fundingModel: 'reembolso',
   unclassifiedTotal: 0,
   linesWithoutBudget: 1,
   overBudget: false,
@@ -102,7 +104,7 @@ describe('buildIndicatorsSheet', () => {
     expect(sheet).toContainEqual(['Remanejado entre rubricas', 2000]);
     expect(sheet).toContainEqual(['Teto de remanejamento', 25000]);
     expect(sheet).toContainEqual(['Consumo do teto (%)', 8]);
-    expect(sheet).toContainEqual(['Baixas de projeto', -41156.24]);
+    expect(sheet).toContainEqual(['Aportes recebidos', 41156.24]);
   });
 });
 

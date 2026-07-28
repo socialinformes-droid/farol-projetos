@@ -19,6 +19,12 @@ export const projectFormSchema = z.object({
   transferLimitPct: z.number().min(0).max(100),
   warningThresholdPct: z.number().min(0).max(100),
   notes: z.string().nullable(),
+  /**
+   * Como o recurso entra no projeto. Define se o dashboard mostra bloco de
+   * caixa e com que leitura — saldo disponível, valor a ressarcir, ou nenhum
+   * dos dois em projeto interno.
+   */
+  fundingModel: z.enum(['adiantamento', 'reembolso', 'interno']),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

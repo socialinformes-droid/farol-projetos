@@ -81,7 +81,8 @@ const SEM_RUBRICA = 'sem';
 
 const KIND_LABEL: Record<EntryKind, string> = {
   despesa: 'Despesa',
-  baixa: 'Baixa',
+  aporte: 'Aporte',
+  ignorado: 'Fora do cálculo',
   manual: 'Manual',
 };
 

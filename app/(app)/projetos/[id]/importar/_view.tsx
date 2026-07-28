@@ -281,8 +281,8 @@ function ProjectPlanCard({ plan }: { plan: ProjectPlan }) {
                 {plan.duplicateCount} duplicado(s) (já importados)
               </Badge>
             )}
-            {plan.writeoffTotal !== 0 && (
-              <Badge variant="outline">Baixas: {formatBRL(plan.writeoffTotal)}</Badge>
+            {plan.contributionTotal !== 0 && (
+              <Badge variant="outline">Baixas: {formatBRL(plan.contributionTotal)}</Badge>
             )}
           </div>
         </div>

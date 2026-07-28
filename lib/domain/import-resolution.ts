@@ -30,7 +30,8 @@ export type ProjectPlan = {
   duplicateCount: number;
   unmappedCount: number;
   expenseTotal: number;
-  writeoffTotal: number;
+  /** Total de aportes recebidos no arquivo, positivo. */
+  contributionTotal: number;
 };
 
 export type UnknownCenter = {
@@ -113,7 +114,7 @@ export function resolveImport(
         duplicateCount: 0,
         unmappedCount: 0,
         expenseTotal: 0,
-        writeoffTotal: 0,
+        contributionTotal: 0,
       };
       plans.set(project.id, plan);
       seenKeys.set(
@@ -141,8 +142,9 @@ export function resolveImport(
       }
     }
 
-    if (entry.kind === 'baixa') {
-      plan.writeoffTotal = round2(plan.writeoffTotal + entry.amount);
+    if (entry.kind === 'aporte') {
+      // Sinal invertido: o razão lança o aporte como crédito negativo.
+      plan.contributionTotal = round2(plan.contributionTotal + Math.abs(entry.amount));
     } else {
       plan.expenseTotal = round2(plan.expenseTotal + entry.amount);
     }

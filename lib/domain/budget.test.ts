@@ -5,6 +5,7 @@ const project: ProjectInput = {
   totalBudget: 100,
   transferLimitPct: 25,
   warningThresholdPct: 80,
+  fundingModel: 'interno',
 };
 
 function line(id: string, budgeted: number | null, parentId: string | null = null): LineInput {
@@ -86,10 +87,10 @@ describe('summarizeProject', () => {
   });
 
   it('ignora baixas no realizado e no teto, somando à parte', () => {
-    const s = summarizeProject(project, [line('a', 10)], [entry('a', 15), entry('a', -41, 'baixa')]);
+    const s = summarizeProject(project, [line('a', 10)], [entry('a', 15), entry('a', -41, 'aporte')]);
     expect(s.realized).toBe(15);
     expect(s.transferred).toBe(5);
-    expect(s.writeoffs).toBe(-41);
+    expect(s.contributions).toBe(41);
   });
 
   it('conta lançamento manual no realizado', () => {
@@ -105,7 +106,7 @@ describe('summarizeProject', () => {
   });
 
   it('respeita limites customizados do projeto', () => {
-    const custom: ProjectInput = { totalBudget: 200, transferLimitPct: 10, warningThresholdPct: 50 };
+    const custom: ProjectInput = { totalBudget: 200, transferLimitPct: 10, warningThresholdPct: 50 , fundingModel: 'interno' };
     const s = summarizeProject(custom, [line('a', 100)], [entry('a', 111)]);
     expect(s.transferCap).toBe(20);
     expect(s.transferred).toBe(11);
@@ -114,7 +115,7 @@ describe('summarizeProject', () => {
   });
 
   it('trata teto zero sem dividir por zero', () => {
-    const zero: ProjectInput = { totalBudget: 100, transferLimitPct: 0, warningThresholdPct: 80 };
+    const zero: ProjectInput = { totalBudget: 100, transferLimitPct: 0, warningThresholdPct: 80 , fundingModel: 'interno' };
     const semEstouro = summarizeProject(zero, [line('a', 10)], [entry('a', 8)]);
     expect(semEstouro.capUsagePct).toBe(0);
     expect(semEstouro.status).toBe('ok');
@@ -163,5 +164,39 @@ describe('summarizeProject', () => {
     const s = summarizeProject(project, [line('a', 50)], [entry('a', 20), entry(null, 10)]);
     expect(s.realized).toBe(30);
     expect(s.executionPct).toBe(30);
+  });
+
+  it('aporte não conta como gasto e vira grandeza positiva', () => {
+    const s = summarizeProject(project, [line('a', 10)], [entry('a', 15), entry('a', -41, 'aporte')]);
+    expect(s.realized).toBe(15);
+    expect(s.contributions).toBe(41);
+    expect(s.transferred).toBe(5);
+  });
+
+  it('projeto interno não tem saldo de caixa', () => {
+    const s = summarizeProject(project, [line('a', 10)], [entry('a', 8), entry('a', -20, 'aporte')]);
+    expect(s.fundingModel).toBe('interno');
+    expect(s.cashBalance).toBeNull();
+  });
+
+  it('adiantamento: saldo positivo é recurso ainda em caixa', () => {
+    const p: ProjectInput = { ...project, fundingModel: 'adiantamento' };
+    const s = summarizeProject(p, [line('a', 50)], [entry('a', 30), entry('a', -50, 'aporte')]);
+    expect(s.contributions).toBe(50);
+    expect(s.realized).toBe(30);
+    expect(s.cashBalance).toBe(20);
+  });
+
+  it('reembolso: saldo negativo é o valor a ressarcir', () => {
+    const p: ProjectInput = { ...project, fundingModel: 'reembolso' };
+    const s = summarizeProject(p, [line('a', 60)], [entry('a', 48), entry('a', -41, 'aporte')]);
+    expect(s.cashBalance).toBe(-7);
+  });
+
+  it('lançamento ignorado fica fora de tudo', () => {
+    const s = summarizeProject(project, [line('a', 10)], [entry('a', 8), entry('a', 500, 'ignorado')]);
+    expect(s.realized).toBe(8);
+    expect(s.contributions).toBe(0);
+    expect(s.transferred).toBe(0);
   });
 });

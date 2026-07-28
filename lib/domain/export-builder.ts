@@ -6,7 +6,8 @@ export type Sheet = SheetCell[][];
 
 const KIND_LABEL: Record<string, string> = {
   despesa: 'Despesa',
-  baixa: 'Baixa de projeto',
+  aporte: 'Aporte recebido',
+  ignorado: 'Fora do cálculo',
   manual: 'Manual',
 };
 
@@ -59,7 +60,7 @@ export function buildIndicatorsSheet(project: ProjectRow, summary: ProjectSummar
     ['Remanejado entre rubricas', summary.transferred],
     ['Teto de remanejamento', summary.transferCap],
     ['Consumo do teto (%)', summary.capUsagePct],
-    ['Baixas de projeto', summary.writeoffs],
+    ['Aportes recebidos', summary.contributions],
     ['Rubricas sem orçamento', summary.linesWithoutBudget],
   ];
 }

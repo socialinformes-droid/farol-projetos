@@ -55,16 +55,19 @@ describe('parseLedgerRows', () => {
     expect(entries[0].costCenterName).toContain('Estruturante 2026 - Capacitações');
   });
 
-  it('classifica conta 4xxx negativa como baixa', () => {
-    const baixa = row({
+  it('classifica conta 4xxx negativa como aporte recebido', () => {
+    // O comprovante desta linha no arquivo real é RECEITAS000047236: é o valor
+    // aportado no projeto, não dedução de despesa. O sinal negativo é a
+    // convenção de crédito do razão — o valor bruto é preservado como veio.
+    const aporte = row({
       'Conta': '41020304001 - Projetos Estratégicos',
       'Valor': '-41156.24',
       'Descrição': 'BAIXA DE PROJETOS',
       'Comprovante': 'RECEITAS000047236',
       'Diário': '2-02160197',
     });
-    const { entries } = parseLedgerRows([HEADER, baixa]);
-    expect(entries[0].kind).toBe('baixa');
+    const { entries } = parseLedgerRows([HEADER, aporte]);
+    expect(entries[0].kind).toBe('aporte');
     expect(entries[0].amount).toBe(-41156.24);
   });
 

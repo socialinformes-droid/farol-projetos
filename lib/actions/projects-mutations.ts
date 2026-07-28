@@ -15,6 +15,7 @@ function toRow(input: ProjectFormValues) {
     transfer_limit_pct: input.transferLimitPct.toFixed(2),
     warning_threshold_pct: input.warningThresholdPct.toFixed(2),
     notes: input.notes,
+    funding_model: input.fundingModel,
   };
 }
 

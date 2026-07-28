@@ -115,11 +115,12 @@ describe('resolveImport', () => {
     ]);
   });
 
-  it('soma despesas e baixas separadamente no resumo', () => {
-    const baixa = entry({ kind: 'baixa', amount: -500, voucher: 'REC1', accountCode: '41020304001' });
+  it('soma despesas e aportes separadamente no resumo', () => {
+    const baixa = entry({ kind: 'aporte', amount: -500, voucher: 'REC1', accountCode: '41020304001' });
     const plan = resolveImport([entry(), baixa], context);
     expect(plan.projects[0].expenseTotal).toBe(100);
-    expect(plan.projects[0].writeoffTotal).toBe(-500);
+    // O aporte entra positivo no plano: o razão o lança como crédito negativo.
+    expect(plan.projects[0].contributionTotal).toBe(500);
     expect(plan.projects[0].newEntries).toHaveLength(2);
   });
 

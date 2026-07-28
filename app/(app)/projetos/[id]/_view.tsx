@@ -28,6 +28,7 @@ import {
 import { ProjectAlerts } from '@/components/project/project-alerts';
 import { TransferCapMeter } from '@/components/project/transfer-cap-meter';
 import { BudgetExecutionMeter } from '@/components/project/budget-execution-meter';
+import { CashPosition } from '@/components/project/cash-position';
 import { BudgetVsActualChart } from '@/components/charts/budget-vs-actual-chart';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -175,6 +176,24 @@ export function ProjectDashboardView({
         </Card>
       </div>
 
+      {summary.cashBalance !== null && (
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <p className="eyebrow">
+              {summary.fundingModel === 'adiantamento'
+                ? 'Caixa do projeto (recurso adiantado)'
+                : 'Caixa do projeto (reembolso mediante prestação de contas)'}
+            </p>
+            <CashPosition
+              fundingModel={summary.fundingModel}
+              contributions={summary.contributions}
+              realized={summary.realized}
+              cashBalance={summary.cashBalance}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {summary.lines.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
           <p className="text-sm text-muted-foreground">Nenhuma rubrica cadastrada ainda.</p>
@@ -213,10 +232,10 @@ export function ProjectDashboardView({
         </CardContent>
       </Card>
 
-      {summary.writeoffs !== 0 && (
+      {summary.contributions !== 0 && (
         <Card>
           <CardContent className="py-3 text-sm text-muted-foreground">
-            Baixas de projeto: {formatBRL(summary.writeoffs)} — não entram no realizado nem no
+            Aportes recebidos: {formatBRL(summary.contributions)} — não entram no realizado nem no
             cálculo do teto.
           </CardContent>
         </Card>

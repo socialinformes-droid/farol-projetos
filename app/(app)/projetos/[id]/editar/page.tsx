@@ -33,6 +33,7 @@ export default async function EditProjectPage({
           startDate: project.start_date,
           endDate: project.end_date,
           status: project.status,
+          fundingModel: project.funding_model ?? 'interno',
           transferLimitPct: Number(project.transfer_limit_pct),
           warningThresholdPct: Number(project.warning_threshold_pct),
           notes: project.notes,

@@ -1,10 +1,22 @@
 export type AlertStatus = 'ok' | 'aviso' | 'violacao';
-export type EntryKind = 'despesa' | 'baixa' | 'manual';
+export type EntryKind = 'despesa' | 'aporte' | 'manual' | 'ignorado';
+
+/**
+ * Como o dinheiro do projeto entra. Muda o que faz sentido perguntar sobre o
+ * caixa — e, no caso interno, se a pergunta existe.
+ *
+ * adiantamento — o recurso entra antes; interessa o saldo ainda disponível
+ * reembolso    — gasta-se primeiro e o valor volta após prestação de contas;
+ *                interessa quanto ainda há a ressarcir
+ * interno      — sai do orçamento próprio, sem aporte externo
+ */
+export type FundingModel = 'adiantamento' | 'reembolso' | 'interno';
 
 export type ProjectInput = {
   totalBudget: number;
   transferLimitPct: number;
   warningThresholdPct: number;
+  fundingModel: FundingModel;
 };
 
 export type LineInput = {
@@ -56,7 +68,24 @@ export type ProjectSummary = {
   transferred: number;
   transferCap: number;
   capUsagePct: number;
-  writeoffs: number;
+  /**
+   * Total aportado no projeto, sempre positivo.
+   *
+   * O razão registra o aporte como crédito, com valor negativo — o sinal é
+   * convenção contábil, não subtração. Aqui ele vira grandeza positiva porque
+   * é o que se lê na tela: "recebido R$ 41.156,24".
+   */
+  contributions: number;
+  /**
+   * Recebido menos gasto. Positivo é dinheiro ainda em caixa; negativo é gasto
+   * além do que entrou.
+   *
+   * A leitura depende da modalidade: em `adiantamento` é saldo disponível; em
+   * `reembolso`, o negativo é o valor a ressarcir. Em `interno` é null — não há
+   * aporte externo e a pergunta não se aplica.
+   */
+  cashBalance: number | null;
+  fundingModel: FundingModel;
   unclassifiedTotal: number;
   linesWithoutBudget: number;
   overBudget: boolean;
@@ -79,14 +108,20 @@ export function summarizeProject(
   lines: LineInput[],
   entries: EntryInput[],
 ): ProjectSummary {
-  // Realizado próprio de cada rubrica. Baixas ficam de fora.
+  // Realizado próprio de cada rubrica. Aportes e ignorados ficam de fora: o
+  // aporte é entrada de recurso, não gasto, e somá-lo à execução mascararia
+  // quanto o projeto de fato consumiu.
   const ownRealized = new Map<string, number>();
-  let writeoffs = 0;
+  let contributions = 0;
   let unclassifiedTotal = 0;
 
   for (const e of entries) {
-    if (e.kind === 'baixa') {
-      writeoffs += e.amount;
+    if (e.kind === 'ignorado') continue;
+
+    if (e.kind === 'aporte') {
+      // O razão lança o aporte como crédito, com sinal negativo. Aqui vira
+      // grandeza positiva — é o valor recebido.
+      contributions += Math.abs(e.amount);
       continue;
     }
     if (e.budgetLineId === null) {
@@ -170,7 +205,11 @@ export function summarizeProject(
     transferred,
     transferCap,
     capUsagePct,
-    writeoffs: round2(writeoffs),
+    contributions: round2(contributions),
+    // Em projeto interno não há aporte externo: a pergunta de caixa não existe.
+    cashBalance:
+      project.fundingModel === 'interno' ? null : round2(contributions - realized),
+    fundingModel: project.fundingModel,
     unclassifiedTotal: round2(unclassifiedTotal),
     linesWithoutBudget,
     overBudget,
@@ -186,6 +225,9 @@ export function toProjectInput(row: ProjectRow): ProjectInput {
     totalBudget: Number(row.total_budget),
     transferLimitPct: Number(row.transfer_limit_pct),
     warningThresholdPct: Number(row.warning_threshold_pct),
+    // Projetos criados antes da migration 0005 não têm o campo; o default do
+    // banco é 'interno', que é também o comportamento antigo (sem bloco de caixa).
+    fundingModel: row.funding_model ?? 'interno',
   };
 }
 

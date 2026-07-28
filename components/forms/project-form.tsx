@@ -31,6 +31,24 @@ type ProjectFormProps = {
   submitLabel: string;
 };
 
+const FUNDING_OPTIONS = [
+  {
+    value: 'interno',
+    label: 'Interno — sai do orçamento próprio',
+    hint: 'Sem aporte externo. O dashboard não mostra posição de caixa.',
+  },
+  {
+    value: 'adiantamento',
+    label: 'Adiantamento — recebe antes de gastar',
+    hint: 'O recurso entra no caixa e você gasta contra ele.',
+  },
+  {
+    value: 'reembolso',
+    label: 'Reembolso — recebe mediante prestação de contas',
+    hint: 'Você gasta primeiro e o valor volta depois da PC.',
+  },
+] as const;
+
 const STATUS_OPTIONS: { value: ProjectFormValues['status']; label: string }[] = [
   { value: 'planejamento', label: 'Planejamento' },
   { value: 'ativo', label: 'Ativo' },
@@ -59,6 +77,7 @@ export function ProjectForm({
       startDate: defaultValues?.startDate ?? null,
       endDate: defaultValues?.endDate ?? null,
       status: defaultValues?.status ?? 'ativo',
+      fundingModel: defaultValues?.fundingModel ?? 'interno',
       transferLimitPct: defaultValues?.transferLimitPct ?? defaults?.transferLimitPct ?? 25,
       warningThresholdPct:
         defaultValues?.warningThresholdPct ?? defaults?.warningThresholdPct ?? 80,
@@ -129,6 +148,33 @@ export function ProjectForm({
                 ))}
               </SelectContent>
             </Select>
+          )}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="fundingModel">Modalidade de financiamento</Label>
+        <Controller
+          control={control}
+          name="fundingModel"
+          render={({ field }) => (
+            <>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="fundingModel" className="w-full">
+                  <SelectValue placeholder="Selecione a modalidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FUNDING_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {FUNDING_OPTIONS.find((o) => o.value === field.value)?.hint}
+              </p>
+            </>
           )}
         />
       </div>
