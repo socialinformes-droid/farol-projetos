@@ -1,10 +1,25 @@
 # Farol de Projetos
 
-Farol de Projetos é a ferramenta de acompanhamento orçamentário dos projetos institucionais do SESI-AL. Cada projeto tem um valor total, dividido em rubricas (as linhas de despesa previstas), e o aplicativo importa o razão contábil, classifica cada lançamento por rubrica, calcula o saldo disponível a qualquer momento e sinaliza quando um projeto se aproxima ou ultrapassa o teto de remanejamento permitido. O uso é interno: acesso por senha única, sem cadastro de usuários.
+Farol de Projetos acompanha as duas execuções de um projeto institucional do SESI-AL — a **financeira** e a **física** — e reúne o que aconteceu em cada período para redigir o monitoramento mensal exigido pelo PMO.
+
+Os dados vivem em dois sistemas de origem: o razão contábil do Genus e o cronograma do SGF. O aplicativo importa ambos, deixa registrar o andamento no dia em que acontece, e ao fim do período junta tudo — atividades concluídas, atrasos em dias, lançamentos, comentários — para gerar o texto do monitoramento. O próprio SGF mede a lacuna que isso resolve: *"Quantidade de dias sem Monitoramento DR: 28"*.
+
+O uso é interno: acesso por senha única, sem cadastro de usuários.
+
+## Módulos
+
+| Rota | O que faz |
+|---|---|
+| `/projetos/[id]/financeiro` | Orçamento por rubrica, import do razão, teto de remanejamento, aportes recebidos |
+| `/projetos/[id]/fisico` | Entregas e atividades do SGF, comentários, fila de pendências de lançamento |
+| `/projetos/[id]/monitoramento` | Coleta por período, barreira de análise, geração assistida por IA |
+| Chat flutuante | Dúvidas sobre o projeto, disponível em toda tela interna |
 
 Este projeto nasceu como fork podado do Financeme (controle financeiro pessoal), reaproveitando a base técnica — Next.js, Supabase, componentes de UI — e removendo todo o domínio de finanças pessoais que não se aplicava a orçamento institucional.
 
 ## A regra do teto de remanejamento
+
+Aplica-se apenas a projetos configurados como **controle por rubrica**. Há projetos em que as rubricas só classificam o gasto e o limite é o total — nesses (`budget_control = 'global'`) não existe remanejamento a medir, e o limiar de aviso passa a incidir sobre a execução do orçamento.
 
 O valor total de um projeto é fixo e dividido entre as rubricas. Gastar menos do que o orçado numa rubrica é livre — a economia não gera crédito em lugar nenhum. Gastar mais do que o orçado numa rubrica é um excesso, e a soma de todos os excessos do projeto (nunca a diferença entre excessos e economias) fica limitada a um percentual configurável do valor total do projeto, por padrão 25%. Em outras palavras, uma rubrica que economizou não compensa outra que estourou: o teto incide sobre a soma bruta dos estouros, não sobre o saldo líquido do projeto.
 
@@ -29,14 +44,43 @@ Nenhuma das duas faz o papel da outra no código: o SheetJS nunca escreve arquiv
 
 Reimportar o mesmo arquivo do razão não duplica lançamentos. Cada linha recebe uma `import_key` — hash SHA-256 de voucher, diário, conta, valor, data e descrição — e um índice único em `(project_id, import_key)` no banco garante que a mesma linha nunca entra duas vezes. O par Comprovante+Diário sozinho não bastava como chave: um mesmo documento contábil pode cobrir várias linhas do razão com a mesma conta e o mesmo valor, distinguidas só pela descrição — por exemplo, duas notas fiscais diferentes lançadas no mesmo comprovante — e usar só o par tratava essas linhas, incorretamente, como duplicatas.
 
+## Aportes recebidos
+
+Contas do grupo `4` com valor negativo no razão **não são dedução de despesa**: são o valor aportado no projeto. O crédito contábil explica o sinal. Elas entram como `kind = 'aporte'`, ficam fora do realizado e não criam rubrica.
+
+Como ler o aporte depende de `funding_model`: em `adiantamento` o recurso entra antes e interessa o saldo em caixa; em `reembolso` gasta-se primeiro e interessa quanto há a ressarcir; em `interno` não há aporte externo e o bloco de caixa nem aparece.
+
+## Acompanhamento físico
+
+O cronograma vem do `.xls` do SGF — que apesar da extensão é SpreadsheetML 2003. Duas armadilhas do formato, ambas tratadas: o prólogo declara `ISO-8859-1` mas o parser assume UTF-8 (é preciso decodificar antes), e a coluna `Entrega` só é preenchida na primeira linha de cada grupo (exige *forward fill*, senão dois terços das atividades ficam órfãs).
+
+Cada atividade guarda quatro datas: início e fim, previsto e real. O status é **derivado das datas do Farol**, nunca copiado do SGF — lá "Em andamento" significa apenas "não concluído", inclusive para atividades que só começam meses depois.
+
+Reimportar é conciliação: datas previstas são substituídas (replanejamento é legítimo), mas **datas reais e comentários registrados aqui nunca são sobrescritos**. O que diverge entre os dois sistemas vira a fila de pendências de lançamento no SGF, que é manual — não há API.
+
+O percentual de progresso vem da contagem de atividades concluídas, não da coluna `% de Realização` do SGF, que só assume 0 ou 100.
+
+## Monitoramento
+
+Duas camadas independentes. A **coleta** monta o registro factual do período e funciona sem IA nenhuma — é ela que produz frases como "concluída em 14/04, com 14 dias de atraso frente ao planejado". A **geração** redige os cinco campos do formulário do PMO chamando o DeepSeek.
+
+O snapshot é salvo antes da chamada à IA: se a geração falhar, o registro factual permanece copiável.
+
+Antes de gerar, uma **barreira de análise** levanta apontamentos — atrasos sem justificativa, entregas sem descrição de benefício — e exige resolução: justificar, marcar como replanejado (não é atraso) ou não reportar. Apontamentos críticos bloqueiam a geração; complementares viram `[a confirmar]` no texto.
+
+Marcar como replanejado **não altera a data prevista**: ela pertence ao SGF, onde o replanejamento é formalizado. A marcação persiste entre períodos mas expira se o SGF mudar a data — a tabela guarda o planejado vigente no momento da resolução, justamente para não deixar o gestor cego para um desvio novo.
+
+O prompt proíbe inventar: onde os dados não sustentam a afirmação, a saída escreve `[a confirmar: ...]` em vez de uma frase plausível. Um risco inventado passa pela análise do DN e vira compromisso.
+
 ## Variáveis de ambiente
 
-Copie `.env.example` para `.env.local` e preencha as quatro:
+Copie `.env.example` para `.env.local` e preencha as cinco:
 
 - `SUPABASE_URL` — URL do projeto Supabase.
 - Chave de service role do Supabase (nome da variável: `SUPABASE_SERVICE_ROLE_KEY`) — contorna Row Level Security e nunca deve chegar ao navegador; é lida só em Server Actions e Route Handlers, nos arquivos marcados com `import 'server-only'`.
 - `APP_PASSWORD` — a senha única de acesso ao aplicativo, comparada em `/api/auth`.
 - `SESSION_SECRET` — segredo usado para assinar o cookie de sessão (HMAC-SHA-256) depois do login. Sem relação com `APP_PASSWORD`: uma variável autentica, a outra assina a sessão resultante.
+- `DEEPSEEK_API_KEY` — chave da API do DeepSeek, usada só na geração do monitoramento e no chat. Sem ela o aplicativo funciona normalmente: a coleta factual e o rascunho do monitoramento não dependem de IA.
 
 ## Rodando localmente
 
@@ -58,13 +102,25 @@ npm test         # vitest
 
 ## Aplicando migrations
 
-As migrations vivem em `supabase/migrations/` e não são aplicadas automaticamente — não há Supabase CLI configurado neste ambiente. Para aplicar, abra o SQL Editor do projeto no painel do Supabase e cole o conteúdo de cada arquivo, em ordem numérica:
+As migrations vivem em `supabase/migrations/` e não são aplicadas automaticamente — não há Supabase CLI configurado neste ambiente. Para aplicar, abra o SQL Editor do projeto no painel do Supabase e cole o conteúdo de cada arquivo, em ordem numérica.
 
-1. `0001_initial_schema.sql`
-2. `0002_import_key.sql`
-3. `0003_app_settings.sql`
+As onze estão aplicadas em produção:
 
-No momento, **`0003_app_settings.sql` está pendente** — ainda não foi aplicada em produção. Ela cria a tabela `app_settings`, que guarda os valores padrão de limite de remanejamento e limiar de aviso usados ao criar um projeto novo. Enquanto a tabela não existir, a leitura dessas configurações captura o erro da consulta e devolve os defaults do código (25% e 80%) em vez de propagar a falha — a tela de Configurações e o formulário de novo projeto continuam funcionando normalmente, só sem persistência dos valores até a migration ser aplicada.
+| Arquivo | O que cria |
+|---|---|
+| `0001_initial_schema` | projetos, rubricas, lançamentos, lotes de import |
+| `0002_import_key` | chave de idempotência correta do import do razão |
+| `0003_app_settings` | padrões de limite e limiar |
+| `0004_entry_notes` | observações e anexos editáveis no lançamento |
+| `0005_aportes` | modalidade de financiamento; `baixa` passa a `aporte` |
+| `0006_budget_control` | controle global ou por rubrica |
+| `0007_identificacao_sgf` | nº do SGF, entidade, gestor |
+| `0008_acompanhamento_fisico` | entregas, atividades, comentários |
+| `0009_monitoramentos` | monitoramentos por período |
+| `0010_analise_monitoramento` | apontamentos da barreira de análise |
+| `0011_contexto_projeto` | documento do projeto como contexto da IA |
+
+O código degrada quando uma migration ainda não foi aplicada: a leitura de configurações, por exemplo, captura o erro da consulta e devolve os defaults (25% e 80%) em vez de propagar a falha.
 
 ## Acesso ao banco
 

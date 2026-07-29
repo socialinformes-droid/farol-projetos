@@ -1,7 +1,15 @@
 # Módulo de Acompanhamento Físico — registro de feature
 
 **Data:** 2026-07-28
-**Status:** registro de intenção — não especificado ao ponto de implementar
+**Status:** **implementado e em produção** (28/07/2026)
+
+O que este documento registrou como intenção foi construído: import do `.xls` do SGF, entregas e
+atividades com quatro datas, comentários, fila de pendências de lançamento, monitoramento por
+período com barreira de análise e geração assistida por DeepSeek. Ver
+`~/Documents/Claude/Segundo-Cerebro/Projetos/farol-projetos/` para a documentação viva.
+
+As perguntas em aberto da seção 6 foram todas respondidas ao longo da implementação — o registro
+delas fica como histórico de como as decisões foram tomadas.
 **Fonte dos dados:** dois relatórios extraídos do **SGF** para o projeto nº 340252.
 
 - `relatorioCronogramaFisicoFinanceiro 28-07-2026 09_05_58.xls` — **a fonte de importação**.
