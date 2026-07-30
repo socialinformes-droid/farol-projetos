@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -12,6 +12,13 @@ import { formatBRL } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableHeader,
@@ -29,6 +36,16 @@ type PreviewResult = {
   plan: ImportPlan;
 };
 
+/** Escolha do usuário para uma conta sem rubrica correspondente. */
+type ResolutionChoice =
+  | { action: 'existing'; budgetLineId: string }
+  | { action: 'create' };
+
+/** projectId -> accountCode -> escolha. */
+type ResolutionState = Record<string, Record<string, ResolutionChoice>>;
+
+const CREATE_NEW_VALUE = '__create_new__';
+
 function formatDateTimeBR(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -37,6 +54,10 @@ function formatDateTimeBR(iso: string): string {
     dateStyle: 'short',
     timeStyle: 'short',
   });
+}
+
+function isProjectResolved(plan: ProjectPlan, resolutions: Record<string, ResolutionChoice>): boolean {
+  return plan.unmappedAccounts.every((a) => resolutions[a.code] !== undefined);
 }
 
 export function ImportarView({
@@ -52,6 +73,7 @@ export function ImportarView({
   const [loading, setLoading] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
+  const [resolutions, setResolutions] = useState<ResolutionState>({});
 
   async function handleFile(file: File) {
     if (!file.name.toLowerCase().endsWith('.xlsx')) {
@@ -61,6 +83,7 @@ export function ImportarView({
 
     setLoading(true);
     setResult(null);
+    setResolutions({});
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -96,7 +119,20 @@ export function ImportarView({
 
   function handleCancel() {
     setResult(null);
+    setResolutions({});
   }
+
+  function handleResolve(projectId: string, accountCode: string, choice: ResolutionChoice) {
+    setResolutions((prev) => ({
+      ...prev,
+      [projectId]: { ...(prev[projectId] ?? {}), [accountCode]: choice },
+    }));
+  }
+
+  const allResolved = useMemo(() => {
+    if (!result) return false;
+    return result.plan.projects.every((p) => isProjectResolved(p, resolutions[p.projectId] ?? {}));
+  }, [result, resolutions]);
 
   async function handleConfirm() {
     if (!result) return;
@@ -107,11 +143,23 @@ export function ImportarView({
     const errors: string[] = [];
 
     for (const projectPlan of result.plan.projects) {
+      const projectResolutions = resolutions[projectPlan.projectId] ?? {};
+      const resolutionsPayload = projectPlan.unmappedAccounts.map((account) => {
+        const choice = projectResolutions[account.code];
+        return choice?.action === 'existing'
+          ? { accountCode: account.code, action: 'existing' as const, budgetLineId: choice.budgetLineId }
+          : { accountCode: account.code, action: 'create' as const, name: account.name };
+      });
+
       try {
         const res = await fetch('/api/import/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: result.filename, plan: projectPlan }),
+          body: JSON.stringify({
+            filename: result.filename,
+            plan: projectPlan,
+            resolutions: resolutionsPayload,
+          }),
         });
         const json = await res.json();
         if (!res.ok) {
@@ -137,6 +185,7 @@ export function ImportarView({
     }
 
     setResult(null);
+    setResolutions({});
     router.refresh();
   }
 
@@ -203,7 +252,14 @@ export function ImportarView({
           </Card>
 
           {result.plan.projects.map((projectPlan) => (
-            <ProjectPlanCard key={projectPlan.projectId} plan={projectPlan} />
+            <ProjectPlanCard
+              key={projectPlan.projectId}
+              plan={projectPlan}
+              resolutions={resolutions[projectPlan.projectId] ?? {}}
+              onResolve={(accountCode, choice) =>
+                handleResolve(projectPlan.projectId, accountCode, choice)
+              }
+            />
           ))}
 
           {result.plan.unknownCenters.map((center) => (
@@ -224,7 +280,7 @@ export function ImportarView({
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={committing || result.plan.projects.length === 0}
+              disabled={committing || result.plan.projects.length === 0 || !allResolved}
             >
               {committing ? 'Confirmando…' : 'Confirmar import'}
             </Button>
@@ -269,7 +325,27 @@ export function ImportarView({
   );
 }
 
-function ProjectPlanCard({ plan }: { plan: ProjectPlan }) {
+function ProjectPlanCard({
+  plan,
+  resolutions,
+  onResolve,
+}: {
+  plan: ProjectPlan;
+  resolutions: Record<string, ResolutionChoice>;
+  onResolve: (accountCode: string, choice: ResolutionChoice) => void;
+}) {
+  const lineItems = useMemo(
+    () =>
+      Object.fromEntries([
+        ...plan.existingBudgetLines.map((l): [string, string] => [
+          l.id,
+          l.code ? `${l.code} — ${l.name}` : l.name,
+        ]),
+        [CREATE_NEW_VALUE, '+ Criar rubrica nova'],
+      ]),
+    [plan.existingBudgetLines],
+  );
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
@@ -293,19 +369,59 @@ function ProjectPlanCard({ plan }: { plan: ProjectPlan }) {
           </div>
         </div>
 
-        {plan.newBudgetLines.length > 0 && (
-          <div className="flex flex-col gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+        {plan.unmappedAccounts.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
             <p className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
               <AlertTriangleIcon className="size-3.5" />
-              Rubricas novas sem orçamento — serão criadas sem orçamento
+              Contas sem rubrica — decida para onde cada uma vai
             </p>
-            <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-              {plan.newBudgetLines.map((line) => (
-                <li key={line.code}>
-                  {line.code} — {line.name}
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-col gap-2">
+              {plan.unmappedAccounts.map((account) => {
+                const choice = resolutions[account.code];
+                const selectValue =
+                  choice?.action === 'existing'
+                    ? choice.budgetLineId
+                    : choice?.action === 'create'
+                      ? CREATE_NEW_VALUE
+                      : undefined;
+
+                return (
+                  <div key={account.code} className="flex flex-wrap items-center gap-2">
+                    <div className="flex-1 text-xs">
+                      <span className="font-mono text-muted-foreground">{account.code}</span>{' '}
+                      <span>{account.name}</span>
+                    </div>
+                    <Select
+                      items={lineItems}
+                      value={selectValue}
+                      onValueChange={(v) => {
+                        if (!v) return;
+                        onResolve(
+                          account.code,
+                          v === CREATE_NEW_VALUE
+                            ? { action: 'create' }
+                            : { action: 'existing', budgetLineId: v },
+                        );
+                      }}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Essa conta corresponde a qual rubrica?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plan.existingBudgetLines.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.code ? `${l.code} — ${l.name}` : l.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={CREATE_NEW_VALUE}>
+                          + Criar rubrica nova ({account.name})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </CardContent>
