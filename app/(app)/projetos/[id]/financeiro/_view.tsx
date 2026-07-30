@@ -97,6 +97,13 @@ export function FinanceiroView({
             >
               Importar
             </Button>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/projetos/${project.id}/financeiro/mapeamento`} />}
+            >
+              Mapeamento
+            </Button>
           </div>
         </div>
       </div>
