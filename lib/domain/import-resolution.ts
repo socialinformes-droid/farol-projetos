@@ -5,12 +5,15 @@ export type ResolutionContext = {
   /** Indexado pelo código do centro de custo. */
   projectsByCode: Record<string, { id: string; name: string }>;
   /** Rubricas já cadastradas, por projeto. */
-  budgetLinesByProject: Record<string, { id: string; code: string | null }[]>;
+  budgetLinesByProject: Record<string, { id: string; code: string | null; name: string }[]>;
   /** Valores de `import_key` já gravados, por projeto. */
   existingKeysByProject: Record<string, string[]>;
+  /** Mapeamento conta do razão -> rubrica, por projeto. Ver migração 0012. */
+  mappingsByProject: Record<string, { accountCode: string; budgetLineId: string }[]>;
 };
 
-export type NewBudgetLine = { code: string; name: string };
+/** Conta do razão sem rubrica correspondente — precisa de uma decisão (rubrica existente ou nova). */
+export type UnmappedAccount = { code: string; name: string };
 
 export type PlannedEntry = ParsedEntry & {
   /** Código da conta que resolve a rubrica. Pode apontar para rubrica ainda a criar. */
@@ -26,7 +29,10 @@ export type ProjectPlan = {
   projectName: string;
   centerCode: string;
   newEntries: PlannedEntry[];
-  newBudgetLines: NewBudgetLine[];
+  /** Contas sem rubrica correspondente — a UI de import decide o destino de cada uma. */
+  unmappedAccounts: UnmappedAccount[];
+  /** Rubricas já cadastradas do projeto — a UI usa para montar o seletor de resolução. */
+  existingBudgetLines: { id: string; code: string | null; name: string }[];
   duplicateCount: number;
   unmappedCount: number;
   expenseTotal: number;
@@ -110,7 +116,8 @@ export function resolveImport(
         projectName: project.name,
         centerCode: entry.costCenterCode,
         newEntries: [],
-        newBudgetLines: [],
+        unmappedAccounts: [],
+        existingBudgetLines: context.budgetLinesByProject[project.id] ?? [],
         duplicateCount: 0,
         unmappedCount: 0,
         expenseTotal: 0,
@@ -136,16 +143,28 @@ export function resolveImport(
     // o gráfico com uma linha que nunca terá valor orçado.
     const isAporte = entry.kind === 'aporte';
 
+    // Resolução em duas etapas: primeiro o mapeamento salvo (migração 0012),
+    // que é o caminho normal depois que o projeto já resolveu essa conta uma
+    // vez; o casamento direto por `budget_lines.code` é só compatibilidade
+    // com projetos que já dependiam dele antes de o mapeamento existir.
+    const mapping = isAporte
+      ? undefined
+      : (context.mappingsByProject[project.id] ?? []).find(
+          (m) => m.accountCode === entry.accountCode,
+        );
+
     const existingLine = isAporte
       ? undefined
-      : (context.budgetLinesByProject[project.id] ?? []).find(
-          (l) => l.code === entry.accountCode,
-        );
+      : mapping
+        ? { id: mapping.budgetLineId }
+        : (context.budgetLinesByProject[project.id] ?? []).find(
+            (l) => l.code === entry.accountCode,
+          );
 
     if (!isAporte && !existingLine) {
       plan.unmappedCount += 1;
-      if (!plan.newBudgetLines.some((l) => l.code === entry.accountCode)) {
-        plan.newBudgetLines.push({ code: entry.accountCode, name: entry.accountName });
+      if (!plan.unmappedAccounts.some((l) => l.code === entry.accountCode)) {
+        plan.unmappedAccounts.push({ code: entry.accountCode, name: entry.accountName });
       }
     }
 

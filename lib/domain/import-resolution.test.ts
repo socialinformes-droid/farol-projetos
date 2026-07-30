@@ -31,9 +31,12 @@ const context: ResolutionContext = {
     '30413070101': { id: 'proj-1', name: 'Estruturante 2026' },
   },
   budgetLinesByProject: {
-    'proj-1': [{ id: 'line-1', code: '31010401001' }],
+    'proj-1': [{ id: 'line-1', code: '31010401001', name: 'Passagens Nacionais' }],
   },
   existingKeysByProject: {
+    'proj-1': [],
+  },
+  mappingsByProject: {
     'proj-1': [],
   },
 };
@@ -45,7 +48,7 @@ describe('resolveImport', () => {
     expect(plan.projects[0].projectId).toBe('proj-1');
     expect(plan.projects[0].newEntries).toHaveLength(1);
     expect(plan.projects[0].newEntries[0].budgetLineCode).toBe('31010401001');
-    expect(plan.projects[0].newBudgetLines).toHaveLength(0);
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(0);
   });
 
   it('marca como duplicado quando a chave já foi importada', () => {
@@ -92,7 +95,7 @@ describe('resolveImport', () => {
   it('propõe rubrica nova quando a conta não existe', () => {
     const nova = entry({ accountCode: '31010403001', accountName: 'Hospedagens', voucher: 'C2' });
     const plan = resolveImport([nova], context);
-    expect(plan.projects[0].newBudgetLines).toEqual([
+    expect(plan.projects[0].unmappedAccounts).toEqual([
       { code: '31010403001', name: 'Hospedagens' },
     ]);
     expect(plan.projects[0].unmappedCount).toBe(1);
@@ -102,7 +105,7 @@ describe('resolveImport', () => {
     const a = entry({ accountCode: '31010403001', accountName: 'Hospedagens', voucher: 'C2' });
     const b = entry({ accountCode: '31010403001', accountName: 'Hospedagens', voucher: 'C3' });
     const plan = resolveImport([a, b], context);
-    expect(plan.projects[0].newBudgetLines).toHaveLength(1);
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(1);
     expect(plan.projects[0].unmappedCount).toBe(2);
   });
 
@@ -148,7 +151,7 @@ describe('resolveImport', () => {
       voucher: 'RECEITAS1',
     });
     const plan = resolveImport([aporte], context);
-    expect(plan.projects[0].newBudgetLines).toHaveLength(0);
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(0);
     expect(plan.projects[0].unmappedCount).toBe(0);
     expect(plan.projects[0].newEntries[0].budgetLineId).toBeNull();
     expect(plan.projects[0].contributionTotal).toBe(41156.24);
@@ -157,7 +160,46 @@ describe('resolveImport', () => {
   it('despesa continua criando rubrica quando a conta é nova', () => {
     const nova = entry({ accountCode: '31010499001', accountName: 'Conta Nova', voucher: 'C9' });
     const plan = resolveImport([nova], context);
-    expect(plan.projects[0].newBudgetLines).toHaveLength(1);
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(1);
     expect(plan.projects[0].unmappedCount).toBe(1);
+  });
+
+  it('usa o mapeamento salvo mesmo quando o código da conta não bate com nenhuma rubrica', () => {
+    const ctx: ResolutionContext = {
+      ...context,
+      mappingsByProject: {
+        'proj-1': [{ accountCode: '99988877', budgetLineId: 'line-1' }],
+      },
+    };
+    const mapeada = entry({ accountCode: '99988877', accountName: 'Consultoria Jurídica' });
+    const plan = resolveImport([mapeada], ctx);
+    expect(plan.projects[0].newEntries[0].budgetLineId).toBe('line-1');
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(0);
+    expect(plan.projects[0].unmappedCount).toBe(0);
+  });
+
+  it('duas contas mapeadas para a mesma rubrica não geram conta não mapeada', () => {
+    const ctx: ResolutionContext = {
+      ...context,
+      mappingsByProject: {
+        'proj-1': [
+          { accountCode: '11122233', budgetLineId: 'line-1' },
+          { accountCode: '44455566', budgetLineId: 'line-1' },
+        ],
+      },
+    };
+    const a = entry({ accountCode: '11122233', accountName: 'Consultoria Jurídica', voucher: 'C1' });
+    const b = entry({ accountCode: '44455566', accountName: 'Consultoria Contábil', voucher: 'C2' });
+    const plan = resolveImport([a, b], ctx);
+    expect(plan.projects[0].newEntries[0].budgetLineId).toBe('line-1');
+    expect(plan.projects[0].newEntries[1].budgetLineId).toBe('line-1');
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(0);
+  });
+
+  it('expõe as rubricas existentes do projeto no plano, para a tela de resolução', () => {
+    const plan = resolveImport([entry()], context);
+    expect(plan.projects[0].existingBudgetLines).toEqual([
+      { id: 'line-1', code: '31010401001', name: 'Passagens Nacionais' },
+    ]);
   });
 });
