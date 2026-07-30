@@ -58,6 +58,15 @@ export type BudgetLineRow = {
   updated_at: string;
 };
 
+export type BudgetLineAccountMappingRow = {
+  id: string;
+  project_id: string;
+  account_code: string;
+  account_name: string | null;
+  budget_line_id: string;
+  created_at: string;
+};
+
 export type LedgerEntryRow = {
   id: string;
   project_id: string;
@@ -201,6 +210,10 @@ export type ActivityFindingRow = {
 
 export type ProjectInsert = Omit<ProjectRow, 'id' | 'created_at' | 'updated_at'>;
 export type BudgetLineInsert = Omit<BudgetLineRow, 'id' | 'created_at' | 'updated_at'>;
+export type BudgetLineAccountMappingInsert = Omit<
+  BudgetLineAccountMappingRow,
+  'id' | 'created_at'
+>;
 export type LedgerEntryInsert = Omit<LedgerEntryRow, 'id' | 'created_at' | 'updated_at'>;
 export type DeliverableInsert = Omit<DeliverableRow, 'id' | 'created_at' | 'updated_at'>;
 export type ActivityInsert = Omit<ActivityRow, 'id' | 'created_at' | 'updated_at'>;
@@ -224,6 +237,7 @@ export type Database = {
     Tables: {
       projects:       { Row: ProjectRow;      Insert: ProjectInsert;      Update: ProjectUpdate;     Relationships: [] };
       budget_lines:   { Row: BudgetLineRow;   Insert: BudgetLineInsert;   Update: BudgetLineUpdate;  Relationships: [] };
+      budget_line_account_mappings: { Row: BudgetLineAccountMappingRow; Insert: BudgetLineAccountMappingInsert; Update: never; Relationships: [] };
       ledger_entries: { Row: LedgerEntryRow;  Insert: LedgerEntryInsert;  Update: LedgerEntryUpdate; Relationships: [] };
       import_batches: { Row: ImportBatchRow;  Insert: Omit<ImportBatchRow, 'id' | 'imported_at'>; Update: Partial<ImportBatchRow>; Relationships: [] };
       app_settings:   { Row: AppSettingsRow;  Insert: AppSettingsRow;    Update: AppSettingsUpdate; Relationships: [] };
