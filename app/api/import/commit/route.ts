@@ -59,74 +59,74 @@ export async function POST(request: Request) {
   // isso, repetir o commit com as mesmas resoluções criaria uma segunda
   // rubrica para cada conta resolvida como "criar nova".
   const resolutionCodes = resolutions.map((r) => r.accountCode);
-  const { data: alreadyMapped } =
+  const { data: alreadyMapped, error: alreadyMappedError } =
     resolutionCodes.length > 0
       ? await supabase
           .from('budget_line_account_mappings')
           .select('account_code, budget_line_id')
           .eq('project_id', plan.projectId)
           .in('account_code', resolutionCodes)
-      : { data: [] as { account_code: string; budget_line_id: string }[] };
+      : { data: [] as { account_code: string; budget_line_id: string }[], error: null };
+
+  if (alreadyMappedError) {
+    return NextResponse.json({ error: alreadyMappedError.message }, { status: 500 });
+  }
 
   const accountCodeToBudgetLineId = new Map<string, string>(
     (alreadyMapped ?? []).map((m) => [m.account_code, m.budget_line_id]),
   );
 
+  // 2. Para cada resolução ainda não mapeada, cria a rubrica quando for o
+  // caso e grava o mapeamento IMEDIATAMENTE — uma resolução por vez, nunca em
+  // lote no final — para que uma falha no meio do processamento não deixe
+  // rubricas já criadas sem mapeamento (o que faria um retry duplicá-las).
   for (const r of resolutions) {
-    if (r.action === 'existing' && !accountCodeToBudgetLineId.has(r.accountCode)) {
-      accountCodeToBudgetLineId.set(r.accountCode, r.budgetLineId);
+    if (accountCodeToBudgetLineId.has(r.accountCode)) continue;
+
+    let budgetLineId: string;
+    if (r.action === 'create') {
+      const { data: created, error: createError } = await supabase
+        .from('budget_lines')
+        .insert({
+          project_id: plan.projectId,
+          parent_id: null,
+          code: null,
+          name: r.name,
+          budgeted_amount: null,
+          sort_order: 0,
+        })
+        .select('id')
+        .single();
+
+      if (createError || !created) {
+        return NextResponse.json(
+          { error: createError?.message ?? 'Não foi possível criar a rubrica.' },
+          { status: 500 },
+        );
+      }
+      budgetLineId = created.id;
+    } else {
+      budgetLineId = r.budgetLineId;
     }
-  }
 
-  // 2. Cria as rubricas para as resoluções "criar nova" que ainda não têm
-  // mapeamento (primeira tentativa). Sem código: o código da conta passa a
-  // viver só no mapeamento, não em `budget_lines.code`.
-  for (const r of resolutions) {
-    if (r.action !== 'create' || accountCodeToBudgetLineId.has(r.accountCode)) continue;
-
-    const { data: created, error: createError } = await supabase
-      .from('budget_lines')
-      .insert({
-        project_id: plan.projectId,
-        parent_id: null,
-        code: null,
-        name: r.name,
-        budgeted_amount: null,
-        sort_order: 0,
-      })
-      .select('id')
-      .single();
-
-    if (createError || !created) {
-      return NextResponse.json(
-        { error: createError?.message ?? 'Não foi possível criar a rubrica.' },
-        { status: 500 },
-      );
-    }
-    accountCodeToBudgetLineId.set(r.accountCode, created.id);
-  }
-
-  // 3. Grava o mapeamento conta -> rubrica para as duas resoluções — é o que
-  // faz o próximo import da mesma conta resolver sozinho, sem perguntar de
-  // novo. Upsert: idempotente num retry.
-  if (resolutions.length > 0) {
     const { error: mappingError } = await supabase.from('budget_line_account_mappings').upsert(
-      resolutions.map((r) => ({
+      {
         project_id: plan.projectId,
         account_code: r.accountCode,
-        account_name:
-          plan.unmappedAccounts.find((u) => u.code === r.accountCode)?.name ?? null,
-        budget_line_id: accountCodeToBudgetLineId.get(r.accountCode)!,
-      })),
+        account_name: plan.unmappedAccounts.find((u) => u.code === r.accountCode)?.name ?? null,
+        budget_line_id: budgetLineId,
+      },
       { onConflict: 'project_id,account_code' },
     );
 
     if (mappingError) {
       return NextResponse.json({ error: mappingError.message }, { status: 500 });
     }
+
+    accountCodeToBudgetLineId.set(r.accountCode, budgetLineId);
   }
 
-  // 4. Cria o batch com os contadores conhecidos pelo plano.
+  // 3. Cria o batch com os contadores conhecidos pelo plano.
   const { data: batch, error: batchError } = await supabase
     .from('import_batches')
     .insert({
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
   }
   const batchId: string = batch.id;
 
-  // 5. Insere os lançamentos em lotes de 500.
+  // 4. Insere os lançamentos em lotes de 500.
   //
   // O índice de idempotência (project_id, import_key) é parcial
   // (`where source = 'import'`) — o Postgres só usa um índice parcial como
@@ -220,7 +220,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // 6. Atualiza o batch com o número realmente gravado.
+  // 5. Atualiza o batch com o número realmente gravado.
   const { error: updateError } = await supabase
     .from('import_batches')
     .update({ rows_inserted: inserted })
