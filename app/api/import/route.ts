@@ -35,10 +35,15 @@ export async function POST(request: Request) {
 
   const projectIds = (projects ?? []).map((p) => p.id);
 
-  const [{ data: lines }, { data: existing }] = await Promise.all([
+  const [{ data: lines }, { data: existing }, { data: mappings }] = await Promise.all([
     projectIds.length
-      ? supabase.from('budget_lines').select('id, code, project_id').in('project_id', projectIds)
-      : Promise.resolve({ data: [] as { id: string; code: string | null; project_id: string }[] }),
+      ? supabase
+          .from('budget_lines')
+          .select('id, code, name, project_id')
+          .in('project_id', projectIds)
+      : Promise.resolve({
+          data: [] as { id: string; code: string | null; name: string; project_id: string }[],
+        }),
     projectIds.length
       ? supabase
           .from('ledger_entries')
@@ -46,6 +51,14 @@ export async function POST(request: Request) {
           .in('project_id', projectIds)
           .eq('source', 'import')
       : Promise.resolve({ data: [] as { project_id: string; import_key: string | null }[] }),
+    projectIds.length
+      ? supabase
+          .from('budget_line_account_mappings')
+          .select('project_id, account_code, budget_line_id')
+          .in('project_id', projectIds)
+      : Promise.resolve({
+          data: [] as { project_id: string; account_code: string; budget_line_id: string }[],
+        }),
   ]);
 
   const context: ResolutionContext = {
@@ -54,15 +67,26 @@ export async function POST(request: Request) {
     ),
     budgetLinesByProject: {},
     existingKeysByProject: {},
+    mappingsByProject: {},
   };
 
   for (const l of lines ?? []) {
-    (context.budgetLinesByProject[l.project_id] ??= []).push({ id: l.id, code: l.code });
+    (context.budgetLinesByProject[l.project_id] ??= []).push({
+      id: l.id,
+      code: l.code,
+      name: l.name,
+    });
   }
   for (const e of existing ?? []) {
     if (e.import_key) {
       (context.existingKeysByProject[e.project_id] ??= []).push(e.import_key);
     }
+  }
+  for (const m of mappings ?? []) {
+    (context.mappingsByProject[m.project_id] ??= []).push({
+      accountCode: m.account_code,
+      budgetLineId: m.budget_line_id,
+    });
   }
 
   return NextResponse.json({
