@@ -59,17 +59,42 @@ export async function POST(request: Request) {
   // isso, repetir o commit com as mesmas resoluções criaria uma segunda
   // rubrica para cada conta resolvida como "criar nova".
   const resolutionCodes = resolutions.map((r) => r.accountCode);
-  const { data: alreadyMapped, error: alreadyMappedError } =
-    resolutionCodes.length > 0
-      ? await supabase
-          .from('budget_line_account_mappings')
-          .select('account_code, budget_line_id')
-          .eq('project_id', plan.projectId)
-          .in('account_code', resolutionCodes)
-      : { data: [] as { account_code: string; budget_line_id: string }[], error: null };
+  const existingBudgetLineIds = [
+    ...new Set(
+      resolutions.filter((r) => r.action === 'existing').map((r) => r.budgetLineId),
+    ),
+  ];
+
+  const [{ data: alreadyMapped, error: alreadyMappedError }, { data: validLines, error: validLinesError }] =
+    await Promise.all([
+      resolutionCodes.length > 0
+        ? supabase
+            .from('budget_line_account_mappings')
+            .select('account_code, budget_line_id')
+            .eq('project_id', plan.projectId)
+            .in('account_code', resolutionCodes)
+        : Promise.resolve({ data: [] as { account_code: string; budget_line_id: string }[], error: null }),
+      existingBudgetLineIds.length > 0
+        ? supabase
+            .from('budget_lines')
+            .select('id')
+            .eq('project_id', plan.projectId)
+            .in('id', existingBudgetLineIds)
+        : Promise.resolve({ data: [] as { id: string }[], error: null }),
+    ]);
 
   if (alreadyMappedError) {
     return NextResponse.json({ error: alreadyMappedError.message }, { status: 500 });
+  }
+  if (validLinesError) {
+    return NextResponse.json({ error: validLinesError.message }, { status: 500 });
+  }
+
+  const validBudgetLineIds = new Set((validLines ?? []).map((l) => l.id));
+  for (const r of resolutions) {
+    if (r.action === 'existing' && !validBudgetLineIds.has(r.budgetLineId)) {
+      return NextResponse.json({ error: 'Rubrica inválida para este projeto.' }, { status: 400 });
+    }
   }
 
   const accountCodeToBudgetLineId = new Map<string, string>(

@@ -202,4 +202,47 @@ describe('resolveImport', () => {
       { id: 'line-1', code: '31010401001', name: 'Passagens Nacionais' },
     ]);
   });
+
+  it('o mapeamento salvo tem precedência sobre o casamento direto por código', () => {
+    // A mesma conta bate por mapeamento (-> line-2) e por código direto em
+    // budget_lines (-> line-1, já existe no fixture com code '31010401001').
+    // O mapeamento precisa vencer: é o caminho normal depois que o projeto já
+    // resolveu essa conta uma vez, o casamento por código é só fallback.
+    const ctx: ResolutionContext = {
+      ...context,
+      budgetLinesByProject: {
+        'proj-1': [
+          { id: 'line-1', code: '31010401001', name: 'Passagens Nacionais' },
+          { id: 'line-2', code: null, name: 'Passagens Nacionais (renomeada)' },
+        ],
+      },
+      mappingsByProject: {
+        'proj-1': [{ accountCode: '31010401001', budgetLineId: 'line-2' }],
+      },
+    };
+    const plan = resolveImport([entry()], ctx);
+    expect(plan.projects[0].newEntries[0].budgetLineId).toBe('line-2');
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(0);
+  });
+
+  it('aporte não usa mapeamento salvo mesmo quando existe um para a conta', () => {
+    // Se a guarda isAporte fosse removida (ou checada depois do mapeamento),
+    // essa conta resolveria para line-1 por causa do mapeamento abaixo.
+    const ctx: ResolutionContext = {
+      ...context,
+      mappingsByProject: {
+        'proj-1': [{ accountCode: '41020304001', budgetLineId: 'line-1' }],
+      },
+    };
+    const aporte = entry({
+      kind: 'aporte',
+      amount: -500,
+      accountCode: '41020304001',
+      accountName: 'Projetos Estratégicos',
+      voucher: 'REC1',
+    });
+    const plan = resolveImport([aporte], ctx);
+    expect(plan.projects[0].newEntries[0].budgetLineId).toBeNull();
+    expect(plan.projects[0].unmappedAccounts).toHaveLength(0);
+  });
 });

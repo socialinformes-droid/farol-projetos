@@ -13,6 +13,17 @@ export async function createMapping(
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
   const supabase = createAdminClient();
+
+  const { data: budgetLine } = await supabase
+    .from('budget_lines')
+    .select('id, project_id')
+    .eq('id', parsed.data.budgetLineId)
+    .maybeSingle();
+
+  if (!budgetLine || budgetLine.project_id !== projectId) {
+    return { ok: false, error: 'Rubrica não encontrada neste projeto.' };
+  }
+
   const { data, error } = await supabase
     .from('budget_line_account_mappings')
     .insert({

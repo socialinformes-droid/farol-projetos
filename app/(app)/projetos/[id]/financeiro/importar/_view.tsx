@@ -148,7 +148,7 @@ export function ImportarView({
         const choice = projectResolutions[account.code];
         return choice?.action === 'existing'
           ? { accountCode: account.code, action: 'existing' as const, budgetLineId: choice.budgetLineId }
-          : { accountCode: account.code, action: 'create' as const, name: account.name };
+          : { accountCode: account.code, action: 'create' as const, name: account.name || account.code };
       });
 
       try {
@@ -414,7 +414,7 @@ function ProjectPlanCard({
                           </SelectItem>
                         ))}
                         <SelectItem value={CREATE_NEW_VALUE}>
-                          + Criar rubrica nova ({account.name})
+                          + Criar rubrica nova ({account.name || account.code})
                         </SelectItem>
                       </SelectContent>
                     </Select>
