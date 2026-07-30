@@ -1402,7 +1402,7 @@ describe('mappingFormSchema', () => {
     const r = parse({
       accountCode: '31010401001',
       accountName: 'Passagens Nacionais',
-      budgetLineId: '11111111-1111-1111-1111-111111111111',
+      budgetLineId: '11111111-1111-4111-8111-111111111111',
     });
     expect(r.success).toBe(true);
   });
@@ -1411,7 +1411,7 @@ describe('mappingFormSchema', () => {
     const r = parse({
       accountCode: '   ',
       accountName: null,
-      budgetLineId: '11111111-1111-1111-1111-111111111111',
+      budgetLineId: '11111111-1111-4111-8111-111111111111',
     });
     expect(r.success).toBe(false);
   });
@@ -1420,7 +1420,7 @@ describe('mappingFormSchema', () => {
     const r = parse({
       accountCode: '31010401001',
       accountName: null,
-      budgetLineId: '11111111-1111-1111-1111-111111111111',
+      budgetLineId: '11111111-1111-4111-8111-111111111111',
     });
     expect(r.success).toBe(true);
     expect(r.success && r.data.accountName).toBeNull();
@@ -1439,7 +1439,7 @@ describe('mappingFormSchema', () => {
     const r = parse({
       accountCode: '  31010401001  ',
       accountName: null,
-      budgetLineId: '11111111-1111-1111-1111-111111111111',
+      budgetLineId: '11111111-1111-4111-8111-111111111111',
     });
     expect(r.success && r.data.accountCode).toBe('31010401001');
   });
